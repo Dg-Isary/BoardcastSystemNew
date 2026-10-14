@@ -1,15 +1,12 @@
-{"id":"1","name":"预备铃","path":"res/ring/01 预备铃.mp3","type":"file"}
-{"id":"2","name":"正式铃","path":"res/ring/02 正式铃.mp3","type":"file"}
-{"id":"3","name":"下课铃","path":"res/ring/03 下课铃.mp3","type":"file"}
-{"id":"4","name":"放学铃声","path":"res/ring/04 放学铃声.mp3","type":"file"}
-{"id":"5","name":"眼保健操","path":"res/ring/10 眼保健操.mp3","type":"file"}
-{"id":"6","name":"5分钟运动员进行曲","path":"res/ring/11 5分钟运动员进行曲.MP3","type":"file"}
-{"id":"7","name":"7分进行曲","path":"res/ring/13 7分进行曲.mp3","type":"file"}
-{"id":"8","name":"11分钟运动员进行曲","path":"res/ring/14 11分钟运动员进行曲.mp3","type":"file"}
-{"id":"9","name":"出旗","path":"res/ring/15 出旗.mp3","type":"file"}
-{"id":"10","name":"国歌","path":"res/ring/15 国歌.MP3","type":"file"}
-{"id":"11","name":"生命的翅膀","path":"res/ring/16 生命的翅膀.mp3","type":"file"}
-{"name":"歌曲目录 (目录)","path":"D:/歌曲目录","type":"folder","id":"12"}
-{"name":"校长 (目录)","path":"D:/校长","type":"folder","id":"13"}
+{"id":"1","name":"预备铃","path":"ring/01 预备铃.mp3","type":"file"}
+{"id":"2","name":"正式铃","path":"ring/02 正式铃.mp3","type":"file"}
+{"id":"3","name":"下课铃","path":"ring/03 下课铃.mp3","type":"file"}
+{"id":"4","name":"放学铃声","path":"ring/04 放学铃声.mp3","type":"file"}
+{"id":"5","name":"眼保健操","path":"ring/10 眼保健操.mp3","type":"file"}
+{"id":"6","name":"5分钟运动员进行曲","path":"ring/11 5分钟运动员进行曲.MP3","type":"file"}
+{"id":"7","name":"7分进行曲","path":"ring/13 7分进行曲.mp3","type":"file"}
+{"id":"8","name":"11分钟运动员进行曲","path":"ring/14 11分钟运动员进行曲.mp3","type":"file"}
+{"id":"9","name":"出旗","path":"ring/15 出旗.mp3","type":"file"}
+{"id":"10","name":"国歌","path":"ring/15 国歌.MP3","type":"file"}
+{"id":"11","name":"生命的翅膀","path":"ring/16 生命的翅膀.mp3","type":"file"}
 {"id":"14","name":"中国之声","path":"https://ngcdn001.cnr.cn/live/zgzs/index.m3u8","type":"hls"}
-{"name":"广播体操七彩阳光","path":"D:/2023春广播/23广播体操-七彩阳光.mp3","type":"file","id":"15"}
