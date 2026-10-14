@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="BroadcastSystemNet.app" />
+
+  <!-- 以当前用户权限运行（只有安装包需要管理员）。不要在这里要求提权：
+       程序只写 HKCU 与 %LOCALAPPDATA%，提权反而会让开机自启、托盘与用户配置落到错误的账户下。 -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 / 11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+      <!-- Windows 8.1 -->
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}" />
+    </application>
+  </compatibility>
+
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <!-- 声明 DPI 感知（本轮新增）：
+           以前没有 app.manifest，进程是 DPI 虚拟化的 —— 系统缩放 150%/175% 时 WPF 拿到的是
+           被位图拉伸过的尺寸，表现为"界面显小、右上角按钮与编辑排程的保存键被挤出可见区"。
+           dpiAware      = true/pm   → 每显示器 DPI 感知（Win8.1 回退路径）
+           dpiAwareness  = PerMonitorV2,PerMonitor → Win10 1703+ 首选；窗口跨屏移动时按新屏 DPI 重排 -->
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2,PerMonitor</dpiAwareness>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+    </windowsSettings>
+  </application>
+</assembly>

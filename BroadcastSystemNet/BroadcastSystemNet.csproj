@@ -1,0 +1,108 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UseWindowsForms>true</UseWindowsForms>
+		<!-- 桌面客户端使用 WPF（纯 C#/.NET，无外部运行时依赖），与后端同一进程 -->
+		<UseWPF>true</UseWPF>
+		<EnableDefaultContentItems>false</EnableDefaultContentItems>
+		<ApplicationIcon>broadcasting.ico</ApplicationIcon>
+		<!-- Per-Monitor DPI 感知（app.manifest）。不加它时进程是 DPI 虚拟化的：
+		     系统缩放 150%/175% 下 WPF 拿到的是被位图拉伸的尺寸，界面显小、按钮与"保存"容易被挤出可见区。 -->
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<!-- WFAC010：WinForms 分析器建议改用 ApplicationHighDpiMode / SetHighDpiMode 而不是 manifest。
+		     本工程的主界面是 WPF（默认启动方式），而 WPF 只认 manifest 里的 DPI 声明；
+		     WinForms 仅作兼容回退（启动参数 winforms），且 Program.cs 会调 ApplicationConfiguration.Initialize()，
+		     manifest 已声明 DPI 时它的 SetHighDpiMode 会静默失败（无副作用）。
+		     因此保留 manifest 方案，并显式屏蔽这条仅针对 WinForms 的建议。
+		     已实测：tray-preview 与 ball-preview 两条"不进屏"的真实 WPF 绘制路径都正常出图。 -->
+		<NoWarn>$(NoWarn);WFAC010</NoWarn>
+		<!-- 允许在更高版本的 .NET 运行时上运行（本机只装了 .NET 10 运行时，便于本地调试与自检）；
+			 发布仍是自包含单文件，不受影响。 -->
+		<RollForward>LatestMajor</RollForward>
+		<!-- 版本号的唯一来源：界面「关于」读程序集信息，安装脚本由 tools\build-release.ps1 传入同一个值。
+		     改版本只改这里一处，避免界面与安装包版本号不一致。 -->
+		<Version>4.0.0</Version>
+		<InformationalVersion>4.0.0</InformationalVersion>
+		<!-- 中间/输出目录一律不作为源码：默认排除项在"重定向中间目录"时会失效，
+		     导致老 obj 里生成的 AssemblyInfo.cs 被重复编译（CS0579 特性重复）。这里显式补上。 -->
+		<DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**</DefaultItemExcludes>
+	</PropertyGroup>
+
+	<!-- 后端需要 ASP.NET Core（Kestrel + 静态文件 + 极简 API），前端是 WPF/WinForms。
+	     这里用通用 SDK + 显式框架引用，避免 Web SDK 与 WPF 混用时的额外编译注入。 -->
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<FrameworkReference Include="Microsoft.WindowsDesktop.App.WPF" />
+		<FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- res 下的所有内容随包分发（bin 里的 ffmpeg、ring 里的铃声、lib 里的前端库、config 模板）。
+		     注意：不要只写 res\** —— 必须带文件通配，否则子目录里只有部分文件会被收集。 -->
+		<Content Include="res\**\*.*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="res\**\**\*.*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="broadcasting.ico" />
+	</ItemGroup>
+
+	<!--
+	  Debug 构建的产物落到仓库内的 run\bin\ 目录，用于"项目目录下绿色运行/就地测试"。
+	  说明：只重定向输出目录，不动中间目录（obj）—— 改 BaseIntermediateOutputPath 会与
+	  默认的 **/*.cs 通配冲突，导致生成两份 AssemblyInfo 而报 CS0579。
+	  Release（发布/打包）仍走默认的 bin\Release，行为不变。
+	-->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<BaseOutputPath>$(MSBuildProjectDirectory)\run\bin\</BaseOutputPath>
+	</PropertyGroup>
+
+	<!-- 桌面端图标字体（Font Awesome Free，SIL OFL 1.1）。WPF 不支持 woff2，需要 .otf/.ttf。
+	     把 fa-solid-900.otf（或 .ttf）放到 res\lib\webfonts\ 即可被自动嵌入；
+	     两个都不存在时界面图标自动回退，功能不受影响。
+	     不设置 LogicalName，让资源以相对路径注册，与 Theme.cs 的 pack URI 一一对应。 -->
+	<ItemGroup Condition="Exists('res\lib\webfonts\fa-solid-900.otf')">
+		<!-- 必须用 EmbeddedResource（本工程下 Resource 项不会被嵌入，已实测），
+		     并显式指定 LogicalName，供 Theme.cs 的 pack URI 引用 -->
+		<EmbeddedResource Include="res\lib\webfonts\fa-solid-900.otf">
+			<LogicalName>res/lib/webfonts/fa-solid-900.otf</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup Condition="Exists('res\lib\webfonts\fa-solid-900.ttf')">
+		<EmbeddedResource Include="res\lib\webfonts\fa-solid-900.ttf">
+			<LogicalName>res/lib/webfonts/fa-solid-900.ttf</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<!--
+	  发布后兜底：重新补齐 res 子目录。
+	  背景：重复发布到同一输出目录时，发布管线会把 res\ring、res\config、res\lib、res\bin 判为过期并删除
+	  （实测第 2 次起必现），导致 Inno Setup 报 "No files found matching ...\res\ring\*"。
+	  这里在发布完成后从源码目录直接补齐，确保产物永远完整。
+	-->
+	<Target Name="RestoreResDirsAfterPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+		<PropertyGroup>
+			<_PublishDirFull>$([System.IO.Path]::GetFullPath('$(PublishDir)'))</_PublishDirFull>
+		</PropertyGroup>
+		<ItemGroup>
+			<_ResFilesToRestore Include="res\**\*.*" />
+		</ItemGroup>
+		<Copy SourceFiles="@(_ResFilesToRestore)"
+		      DestinationFiles="@(_ResFilesToRestore->'$(_PublishDirFull)res\%(RecursiveDir)%(Filename)%(Extension)')"
+		      SkipUnchangedFiles="false"
+		      Condition="'@(_ResFilesToRestore)' != ''" />
+		<Message Importance="high" Text="已补齐发布目录中的 res 资源文件（$(PublishDir)）" />
+	</Target>
+
+</Project>

@@ -1,0 +1,3 @@
+{"_type": "global", "global_switch": true, "password": "", "subscription_urls": ["https://api.comm.miui.com/holiday/holiday.jsp", "https://p10-calendars.icloud.com/holidays/CN_ZH.ics", "https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/{year}.json", "https://raw.githubusercontent.com/NateScarlet/holiday-cn/master/{year}.json"], "subscription_interval": 12}
+{"date": "2026-05-01", "marker": 0, "action": "disable", "note": "劳动节", "_type": "tiaoxiu"}
+{"date": "2026-05-04", "marker": 0, "action": "enable", "note": "劳动节补班", "_type": "tiaoxiu"}
