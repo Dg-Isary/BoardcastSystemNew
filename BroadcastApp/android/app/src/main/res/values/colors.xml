@@ -1,0 +1,5 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 窗口与系统栏底色：必须和 Compose 侧的 background 一致，否则底部/顶部会露出系统深色底（黑框） -->
+    <color name="app_window_bg">#F5F7FA</color>
+</resources>
