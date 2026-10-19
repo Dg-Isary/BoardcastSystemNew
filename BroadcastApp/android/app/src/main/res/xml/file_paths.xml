@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 供 LogExport 用 FileProvider 分享排错日志（只暴露 App 私有目录下的 logs/） -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <files-path name="logs" path="logs/" />
+</paths>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>话筒/组网二维码</title>
+<script src="/res/lib/qrcode.min.js"></script>
+<style>
+  body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; background: #f4f6f8; color: #2c3e50; margin: 0; padding: 24px; }
+  .card { background: #fff; border: 1px solid #e3ecf3; border-radius: 14px; padding: 22px; max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  h2 { font-size: 13.5px; margin: 18px 0 6px; }
+  p { color: #7f8c8d; font-size: 13px; line-height: 1.75; margin: 6px 0; }
+  #qr { margin: 18px auto; text-align: center; min-height: 260px; }
+  #qr img, #qr canvas { border: 10px solid #fff; box-shadow: 0 2px 12px rgba(0,0,0,.14); }
+  #payload { background: #f0f2f5; padding: 10px; border-radius: 8px; font-size: 12px; word-break: break-all;
+             font-family: Consolas, monospace; max-height: 190px; overflow: auto; }
+  .warn { color: #e67e22; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>手机端扫码：一次入网 + 直接使用网页全部功能</h1>
+  <p>扫码后手机即可使用本机的全部网页功能（任务排程 / 播控 / 调休 / 预警 / 日志…），<strong>沿用网页登录口令</strong>。</p>
+  <p class="warn"><strong>话筒喊话不在这张码里授权</strong>：每次打开 App 都要在手机上重新输入电脑端「话筒开关」窗里显示的 6 位动态码
+     （60 秒换一次、用一次即作废；会话密钥只在内存里，App 退出即失效）。</p>
+  <div id="qr">正在生成…</div>
+  <h2>二维码内容（也可复制给 App 手动导入）</h2>
+  <div id="payload">正在读取…</div>
+</div>
+<script>
+fetch('/api/mic/qr').then(function (r) { return r.json(); }).then(function (d) {
+  var text = d.payload || '';
+  document.getElementById('payload').textContent = text;
+  if (!text) { document.getElementById('qr').textContent = '还没有可用的载荷：请先在「vnt 设置」里填好服务器与 token。'; return; }
+  try {
+    var qr = qrcode(0, 'L');           // 0 = 自动选择版本；L = 最低纠错（容量最大，载荷偏长）
+    qr.addData(text);
+    qr.make();
+    document.getElementById('qr').innerHTML = qr.createImgTag(7, 14);   // 7px/模块、14px 边距
+  } catch (e) {
+    document.getElementById('qr').textContent = '生成失败：' + e;
+  }
+}).catch(function (e) { document.getElementById('qr').textContent = '读取失败：' + e; });
+</script>
+</body>
+</html>

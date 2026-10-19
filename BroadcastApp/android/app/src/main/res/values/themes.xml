@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  低版本（API < 28）用的基础主题，其余与 values-v28 保持一致。
+
+  注意：原来基底是 Theme.Material（**深色**），windowBackground 默认近黑 ——
+  底部面板/系统导航栏附近会露出一条黑框（用户反馈"底部黑框不好看"）。
+  现在改成浅色基底 + 明确的窗口与导航栏底色，并与 Compose 侧 background 保持一致。
+-->
+<resources>
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/app_window_bg</item>
+        <item name="android:navigationBarColor">@color/app_window_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

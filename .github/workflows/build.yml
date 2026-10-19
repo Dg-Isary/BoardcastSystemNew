@@ -1,0 +1,156 @@
+name: build
+
+# 什么时候跑：推 main、打 v* 标签、PR、或手动触发
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: 1
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  # ============================================================
+  # 电脑端：取依赖 -> 门禁/自检 -> 安装包
+  # 依赖（ffmpeg / 铃声）按体积与合规要求**不进 git**，由 tools\fetch-deps.ps1 自动下载：
+  #   · ffmpeg 用 BtbN/FFmpeg-Builds 的 **LGPL** win64 非 shared 版（GPL 版会让整个分发变成 GPL）；
+  #   · 铃声包地址来自 secret CBS_RING_URL（指向你自己的"音乐库"仓库 Release 资产）。
+  # ============================================================
+  desktop:
+    name: 电脑端（安装包）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # 依赖体积大（ffmpeg 约 160MB + 铃声约 30MB），缓存一下省得每次重下
+      - name: 缓存依赖（ffmpeg / 铃声）
+        uses: actions/cache@v4
+        with:
+          path: |
+            third_party/ffmpeg
+            third_party/ring
+          key: cbs-deps-${{ runner.os }}-v1
+
+      - name: 取依赖（ffmpeg + 铃声）
+        shell: powershell
+        env:
+          CBS_RING_URL: ${{ secrets.CBS_RING_URL }}
+          CBS_ASSET_TOKEN: ${{ secrets.CBS_ASSET_TOKEN }}
+        run: |
+          $a = @()
+          if ($env:CBS_RING_URL) { $a += @('-RingUrl', $env:CBS_RING_URL) }
+          if ($env:CBS_ASSET_TOKEN) { $a += @('-RingToken', $env:CBS_ASSET_TOKEN) }
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools\fetch-deps.ps1 @a
+          if ($LASTEXITCODE -ne 0) { throw "fetch-deps failed (exit code $LASTEXITCODE)" }
+
+      # Inno Setup 不是 runner 预装的；装不上也不致命（脚本会跳过打包、仍产出 publish）
+      - name: 安装 Inno Setup
+        shell: pwsh
+        continue-on-error: true
+        run: choco install innosetup -y --no-progress
+
+      - name: 构建（门禁 + 自检 + 安装包）
+        shell: powershell
+        env:
+          # runner 是英文系统、没有中文语音包：允许自检把"SAPI 中文语音"这条降级为 SKIP
+          CBS_SELFTEST_ALLOW_NO_TTS: '1'
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools\build-opensource.ps1 -DesktopOnly
+          if ($LASTEXITCODE -ne 0) { throw "desktop build failed (exit code $LASTEXITCODE)" }
+
+      - name: 上传安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-opensource
+          path: Output/*_opensource.exe
+          if-no-files-found: warn
+
+  # ============================================================
+  # 安卓端：APK
+  # 安卓启动图标(mipmap-*)、local.properties、gradlew 都没入库，
+  # 由 tools\build-opensource.ps1 -AndroidOnly 自动补齐（生成占位图标）。
+  # 签名：默认 debug 签名（能装、不能上架）。要发布签名，配这 4 个 secret：
+  #   CBS_KEYSTORE(base64 的 .jks) / CBS_KEY_ALIAS / CBS_KEYSTORE_PASSWORD / CBS_KEY_PASSWORD
+  # ============================================================
+  android:
+    name: 安卓端（APK）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      # 注意：GitHub Actions 的 if: 里**不能**直接用 secrets 上下文（会报 Unrecognized named-value），
+      # 必须先用 env 中转再判断。
+      - name: 还原发布签名密钥库（仅当配置了 Secret 时）
+        if: env.CBS_KEYSTORE_B64 != ''
+        shell: pwsh
+        env:
+          CBS_KEYSTORE_B64: ${{ secrets.CBS_KEYSTORE }}
+        run: |
+          $path = Join-Path $env:RUNNER_TEMP 'cbs-release.jks'
+          [System.IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($env:CBS_KEYSTORE_B64))
+          "CBS_KEYSTORE=$path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: 构建 APK
+        shell: powershell
+        env:
+          CBS_KEY_ALIAS: ${{ secrets.CBS_KEY_ALIAS }}
+          CBS_KEYSTORE_PASSWORD: ${{ secrets.CBS_KEYSTORE_PASSWORD }}
+          CBS_KEY_PASSWORD: ${{ secrets.CBS_KEY_PASSWORD }}
+        run: |
+          $gradle = (Get-Command gradle -ErrorAction Stop).Source
+          powershell -NoProfile -ExecutionPolicy Bypass -File tools\build-opensource.ps1 -AndroidOnly -GradleBin $gradle -SkipSelfTest -ForcePlaceholderIcons
+          if ($LASTEXITCODE -ne 0) { throw "android build failed (exit code $LASTEXITCODE)" }
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BroadcastApp-apk
+          path: dist/BroadcastApp_opensource.apk
+          if-no-files-found: error
+
+  # ============================================================
+  # 打 v* 标签时：把两个产物发到 GitHub Release（附 SHA256 校验值）
+  # 用法：git tag -a v4.1.0 -m "v4.1.0" && git push origin v4.1.0
+  # ============================================================
+  release:
+    name: 发布 Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 生成 SHA256 校验值
+        run: |
+          cd artifacts
+          find . -type f \( -name '*.exe' -o -name '*.apk' \) -print0 | xargs -0 sha256sum > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: 创建 Release 并上传
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.apk
+            artifacts/SHA256SUMS.txt
+          generate_release_notes: true

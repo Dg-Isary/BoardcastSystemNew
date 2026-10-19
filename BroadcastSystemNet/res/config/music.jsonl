@@ -1,0 +1,7 @@
+{"id":"1","name":"上课铃","path":"ring/上课铃.mp3","type":"file"}
+{"id":"2","name":"下课铃","path":"ring/下课铃.mp3","type":"file"}
+{"id":"3","name":"集合铃","path":"ring/集合铃.mp3","type":"file"}
+{"id":"4","name":"预备铃","path":"ring/预备铃.mp3","type":"file"}
+{"id":"5","name":"正式铃","path":"ring/正式铃.mp3","type":"file"}
+{"id":"6","name":"下课铃_语音版","path":"ring/下课铃_语音版.mp3","type":"file"}
+{"id":"7","name":"中国之声","path":"https://ngcdn001.cnr.cn/live/zgzs/index.m3u8","type":"hls"}

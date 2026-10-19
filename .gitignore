@@ -1,0 +1,144 @@
+# ============================================================================
+# 智能校园广播系统 · 版本控制排除清单
+# ----------------------------------------------------------------------------
+# 入库原则：源码 / 文档 / 脚本 / 前端库与 FA 字体 / 上游参考源码。
+# 排除原则：可重建产物、密钥、真实运行数据、调试残留、机器相关文件，
+#           以及图标（ico / svg / 安卓转制图标）与铃声素材（本地保留即可，见第 7 节）。
+#
+# 【重要】本文件一律使用“锚定路径”（以 / 开头或带目录层级），
+#         绝不能写裸的 bin/ 或 obj/ —— 因为 BroadcastSystemNet\res\bin\
+#         存放着 ffmpeg/ffplay 等必需资源（207 MB），一旦被忽略，
+#         打包门禁（tools\build-release.ps1 第 [4/5] 步）会直接失败。
+# ============================================================================
+
+# ---------- 1. .NET 构建产物（锚定到具体工程，避免误伤 res\bin） ----------
+/BroadcastSystemNet/bin/
+/BroadcastSystemNet/obj/
+/old/*/BroadcastSystemNet/bin/
+/old/*/BroadcastSystemNet/obj/
+/old/*/BroadcastSystemNet/run/
+
+# ---------- 2. 就地“绿色运行”的输出目录（run / run_xxx） ----------
+# csproj 把 Debug 产物重定向到 BroadcastSystemNet\run\bin\，根目录的 run_* 是历次临时构建目录。
+/run*/
+/BroadcastSystemNet/run/
+
+# ---------- 3. 工具链缓存与 IDE 状态 ----------
+# 注意：gradle 缓存有两处（根目录 .gradle-home 与 BroadcastApp\.gradle-home，
+# 后者由 build-android.bat 的 GRADLE_USER_HOME 产生），所以这里用 ** 匹配任意层级。
+**/.gradle-home/
+**/.gradle/
+/.javatools/
+/.vs/
+/BroadcastApp/tools/gradle-9.5.0/
+/BroadcastApp/android/build/
+/BroadcastApp/android/app/build/
+/BroadcastApp/out/
+/BroadcastApp/.out/
+/BroadcastApp/.tools/
+# 机器相关：内容是本机 Android SDK 绝对路径，克隆后需自行创建（见 docs\交接-未完成项-20261012.md）
+/BroadcastApp/android/local.properties
+
+# ---------- 4. 发布与安装产物（可重建，体积大） ----------
+# 注意：这里**不能**写成锚定的 /dist/ —— 程序/自检会在工程内也生成 dist\（例如
+# BroadcastSystemNet\dist\qr-selftest.png），锚定规则漏掉它，结果被 git add -A 带进库一次。
+# 所以 dist 用非锚定写法，把任意层级的 dist 目录都覆盖。
+dist/
+/Output/
+
+# ---------- 5. 密钥与真实数据（绝不入库） ----------
+# 用户 2026-10-14：vnts 运行件整体移出仓库 —— 从 vnts\ 搬到 third_party\vnts-runtime\ 且不入库。
+# 它只是"本地测试用的 vnt 服务端"（vnts.exe + 管理页面 + 日志配置），**不参与打包**：
+#   csproj 的 Content 只收 res\** 与 broadcasting.ico，.iss 只打 publish\*，实测 publish 下没有 vnts。
+# 上游**源码**仍在库里（third_party\vnts-1.2.12\，仅作协议对照，未作修改）。
+# 密钥（服务端私钥）与运行日志本来就不入库，现在整目录都不入库，所以下面两条老规则已被覆盖，
+# 保留 **/*.pem 作为兜底。
+/third_party/vnts-runtime/
+/.vnts-key-backup/
+# 兜底：任何位置的 PEM 私钥/公钥都不入库（运行期生成的 config\vnt_rsa.pem 也在此列）
+**/*.pem
+# 应用自身的整包备份（含真实排程与铃声）
+/BroadcastBackup_*.zip
+/old/_data-backups/
+# 写盘前的滚动备份（含真实数据快照）
+**/config/_backup/
+
+# ---------- 6. 机器 / 用户相关的工程文件 ----------
+*.csproj.user
+*.pubxml.user
+*.suo
+
+# ---------- 7. 图标与铃声素材（不入库；本地文件保留，打包照常调用） ----------
+# 用户 2026-10-12 明确：ico / svg / 安卓转制图标 / 铃声 **不入版本库**，
+# 只要本地磁盘上还在、打包时能取到即可。
+# 注意（新克隆必须知道）：这些文件缺失会让"全新克隆"无法直接打包 ——
+#   · csproj 的 <ApplicationIcon>broadcasting.ico</ApplicationIcon> 找不到文件会编译失败；
+#   · tools\build-release.ps1 第 [4/5] 步会校验 res\ring 非空，空目录直接中止打包；
+#   · res\favicon.ico 是网页看板的站点图标，res\ring 是安装包释放给用户的初始铃声模板。
+# 因此**只在本机保留即可，不要删**；换机器时请把这几类文件一并拷过去。
+*.ico
+*.svg
+/BroadcastSystemNet/res/ring/
+/BroadcastApp/android/app/src/main/res/mipmap-*/
+
+# ---------- 7b. ffmpeg / ffplay 二进制（207 MB，不入库） ----------
+# 用户 2026-10-13 要求：git 不再引用 res\bin。这 10 个文件（ffmpeg/ffplay/ffprobe + 7 个 DLL）
+# 合计 207 MB，是仓库里唯一的大头；移出后跟踪内容从 233 MB 降到约 26 MB。
+# 注意（新克隆必须知道）：
+#   · 它们是**运行与打包的必需资源** —— tools\build-release.ps1 第 [4/5] 步会校验
+#     publish\res\bin\ffplay.exe，缺失即中止打包；
+#   · csproj 会把 res\** 一起复制到输出，所以**本机保留即可**，编译/出包不受影响；
+#   · 换机器时请把整个 res\bin 目录一并拷过去（或从任一历史安装包/发布目录里取）。
+/BroadcastSystemNet/res/bin/
+
+# ---------- 7c. docs\ 不入库（本地记录，不是标准化文档） ----------
+# 用户 2026-10-13 要求：docs\ 只是本地工作记录（接口文档、重写方案、交接说明、审查报告等），
+# 不是要对外发布的标准化文档，因此**排除出版本库**，文件保留在磁盘上。
+# 附带好处：里面含有使用者私有服务器地址与公钥指纹、手机设备 ID —— 排除后就不会随仓库外流。
+# 需要这些文档时：直接看磁盘上的 docs\ 目录（它一直在这儿，只是不受 git 管理）。
+/docs/
+
+# ---------- 7d. 根目录下的 .zip 快照（派生产物） ----------
+# 例如手工打包的 v400.zip（项目快照）—— 它是从工作区生成的归档，不是源码，入库只会让仓库膨胀。
+# 注意：应用自身的整包备份 BroadcastBackup_*.zip 由第 5 节单独排除。
+/*.zip
+
+# ---------- 7e. 根目录只放规范化文档 ----------
+# 用户 2026-10-13：**非规范化文档一律归到 docs\ 下**（含原根目录的 report.md、人工测试清单.md、
+# 旧版 README.md），随 docs\ 一起不入库。根目录只保留**规范化的** README.md 与 VERSION.md（已入库）。
+# 因此本节不列具体文件名：将来根目录若又出现 report.md / 人工测试清单.md 这类本地记录，
+# 请把它们**移进 docs\**，而不是在这里加忽略规则。
+# （历史上我误把"移进 docs\"判成"误删"，在根目录恢复过副本 —— 已核实内容一致并删除，勿再重复。）
+
+# ---------- 7f. 开源构建的输入与生成物（都不入库） ----------
+# 用户 2026-10-14：ffmpeg 与第三方铃声**不放进源码**，但构建时要打进安装包（合规打包）。
+#   · third_party\ffmpeg\  —— 打包用的 ffmpeg/ffplay/ffprobe 及 DLL（约 207 MB），来源见其 README.md
+#   · third_party\ring\    —— 打包用的初始铃声（约 31 MB），再分发许可需自行确认，见其 README.md
+#   · tools\opensource\    —— 开源构建脚本自动生成的占位资源（blank.ico / 静音占位铃声）
+# tools\build-opensource.ps1 会**自动搜索** ffmpeg（也支持 %USERPROFILE%\Downloads\ffmpeg*），
+# 所以即使这两个目录不存在，脚本仍能在别处找到 ffmpeg 并完成构建；它也会按需生成占位资源。
+/third_party/ffmpeg/
+/third_party/ring/
+/tools/opensource/
+
+# ---------- 8. 调试残留 ----------
+# _blocks\ 是从 index.html 抽出的内联脚本块草稿（tools\check-frontend.ps1 实际用 %TEMP%，不依赖它）
+/_blocks/
+/_diag*.txt
+# 离线自检的临时沙箱与报告（--workdir / --out 的产物）
+/.selftest*/
+# 验证过程中生成的临时预览图 / 临时目录（例如 --task-editor-preview 的输出）。
+# 教训：它们曾被 git add -A 带进库一次 —— 生成验证产物时请用这些前缀，或干脆放到仓库外。
+/.te-*
+/.st-*
+/classes.dex
+/system_error.log
+**/system_error.log
+# 截图样本、网络体检报告、PyInstaller 构建残留
+/tools/*.png
+/tools/netcheck-report-*.txt
+/tools/build/
+/tools/dist/
+**/__pycache__/
+*.pyc
+/.build-all*.log

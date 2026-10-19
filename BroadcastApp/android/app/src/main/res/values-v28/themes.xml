@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  全面屏（刘海/挖孔）适配：允许内容铺到挖孔区域（shortEdges），真正的安全区由界面用 Compose 的 WindowInsets 留出。
+
+  注意：这里原来把基底写成了 Theme.Material（**深色**），会在 API 28+ 覆盖掉 values/themes.xml 的浅色基底，
+  导致窗口/底部露出近黑底色（用户反馈"底部黑框不好看"）。所以两个文件必须写一致的窗口与导航栏底色。
+-->
+<resources>
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/app_window_bg</item>
+        <item name="android:navigationBarColor">@color/app_window_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>
