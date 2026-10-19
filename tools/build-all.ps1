@@ -67,6 +67,17 @@ function AssertApkCopied([string]$distPath) {
     try { return ((Get-FileHash $distPath -Algorithm SHA256).Hash -eq (Get-FileHash $src -Algorithm SHA256).Hash) } catch { return $true }
 }
 
+# 【互斥】build-all 会清空 publish 目录，两个实例并发必然互相破坏
+# （实测：一个在删 avfilter-11.dll、另一个在用 -> IOException，publish 被清一半，安装包只剩 33MB）。
+# 用系统级命名互斥体，进程退出（含被杀）时自动释放，不会留下"僵尸锁文件"。
+$mutexName = 'Global\CBS-BroadcastSystem-BuildAll'
+$buildMutex = New-Object System.Threading.Mutex($false, $mutexName)
+if (-not $buildMutex.WaitOne(0)) {
+    Write-Host '  另一个 build-all 正在运行（publish 目录不能并发构建）' -ForegroundColor Red
+    Write-Host '  等它结束后再试；如果确认没有别的实例，重启终端即可（互斥体会随进程释放）' -ForegroundColor DarkGray
+    exit 2
+}
+
 # 【安卓签名】本地构建也要用发布签名，否则打出来的 APK 装不上 CI 的包（签名不同必须卸载重装）。
 # 口令不写在脚本里：从用户目录下的 cbs-signing.env 读取（该文件不在仓库里）。
 $signEnv = Join-Path $env:USERPROFILE 'cbs-signing.env'
@@ -151,5 +162,6 @@ if ($failed.Count -gt 0) {
     Write-Host ('构建失败：' + ($failed -join '；')) -ForegroundColor Red
     exit 1
 }
-Write-Host '三个包全部产出完成。' -ForegroundColor Green
+Write-Host '三个包全部产出完成。'
+if () { try { .ReleaseMutex() } catch {} ; .Dispose() } -ForegroundColor Green
 exit 0
