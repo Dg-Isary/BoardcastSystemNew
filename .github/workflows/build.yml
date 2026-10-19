@@ -176,4 +176,6 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.apk
             artifacts/SHA256SUMS.txt
-          generate_release_notes: true
+          # 用仓库里的 RELEASE_NOTES.md 作为发布说明（仓库是单提交快照，自动生成的 notes 没有意义）
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: false

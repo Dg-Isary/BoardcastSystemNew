@@ -132,7 +132,11 @@ try {
             $eapT = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
             & $git tag -d $Tag 2>&1 | Out-Null
             $ErrorActionPreference = $eapT
-            & $git tag -s $Tag -m $Tag public 2>$null
+            # 标签消息带上更新日志（取 RELEASE_NOTES.md；没有就退回版本号）
+            $tagMsg = $Tag
+            $rn = Join-Path $Root 'RELEASE_NOTES.md'
+            if (Test-Path $rn) { $tagMsg = (Get-Content $rn -Raw -Encoding UTF8).Trim() }
+            & $git tag -s $Tag -m $tagMsg public 2>$null
             if ($LASTEXITCODE -ne 0) {
                 Write-Host '  签名标签失败（GPG 未就绪？），回退为普通标签' -ForegroundColor Yellow
                 & $git tag -a $Tag -m $Tag public
