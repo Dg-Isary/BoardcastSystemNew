@@ -67,6 +67,23 @@ function AssertApkCopied([string]$distPath) {
     try { return ((Get-FileHash $distPath -Algorithm SHA256).Hash -eq (Get-FileHash $src -Algorithm SHA256).Hash) } catch { return $true }
 }
 
+# 【安卓签名】本地构建也要用发布签名，否则打出来的 APK 装不上 CI 的包（签名不同必须卸载重装）。
+# 口令不写在脚本里：从用户目录下的 cbs-signing.env 读取（该文件不在仓库里）。
+$signEnv = Join-Path $env:USERPROFILE 'cbs-signing.env'
+if (Test-Path $signEnv) {
+    Get-Content $signEnv -Encoding UTF8 | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and -not $line.StartsWith('#') -and $line.Contains('=')) {
+            $k = $line.Substring(0, $line.IndexOf('=')).Trim()
+            $v = $line.Substring($line.IndexOf('=') + 1).Trim()
+            if ($k) { Set-Item -Path ('env:' + $k) -Value $v }
+        }
+    }
+    Write-Host ('  已加载本地签名配置: ' + $signEnv) -ForegroundColor DarkGray
+} else {
+    Write-Host '  [提示] 没找到 cbs-signing.env，APK 会回退 debug 签名（装不上发布签名的包）' -ForegroundColor Yellow
+}
+
 $failed = @()
 
 # ---------- 1/4 闭源 桌面安装包 ----------

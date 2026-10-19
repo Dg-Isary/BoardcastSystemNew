@@ -1,4 +1,6 @@
-﻿@echo off
+@echo off
+chcp 65001 >nul
+
 rem =====================================================================
 rem  Android build (Compose + MIUIX) - one-click APK
 rem
