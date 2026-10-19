@@ -12,7 +12,7 @@ android {
         minSdk = 26
         // targetSdk 用 36（Android 16 正式版）：顶到预览号只会让新系统按"未来行为"跑，兼容性反而变差
         targetSdk = 36
-        versionCode = 40101
+        versionCode = 40102
         versionName = "4.1"
         // 模拟器是 x86_64、真机是 arm64，两种都带上（这个 App 没有原生库，加着也不增体积）
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }

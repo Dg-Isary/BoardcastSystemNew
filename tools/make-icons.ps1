@@ -156,8 +156,24 @@ $androidOut = Join-Path $OutDir 'android'
 $safeRatio = 66.0 / 108.0      # 安全区：中央 66dp / 108dp 画布
 
 # 先渲染一张大图当素材（前景/单色/老系统整图都用它缩放）
-$master = New-SvgPng 432 (Join-Path $work 'master.png')
+$master = New-SvgPng 512 (Join-Path $work 'master.png')
 $masterImg = [System.Drawing.Image]::FromFile($master)
+
+# 【按包围盒居中】这个 SVG 的声波画到了 x=126（viewBox 只有 120），图形本身不对称，
+# 按画布居中会整体偏右（实测偏 19px/432 ≈ 4.4%）。所以先量出非透明包围盒，再按它居中。
+$mb = [System.Drawing.Bitmap]::FromFile($master)
+$bx0 = $mb.Width; $bx1 = -1; $by0 = $mb.Height; $by1 = -1
+for ($x = 0; $x -lt $mb.Width; $x += 2) {
+    for ($y = 0; $y -lt $mb.Height; $y += 2) {
+        if ($mb.GetPixel($x, $y).A -gt 8) {
+            if ($x -lt $bx0) { $bx0 = $x }; if ($x -gt $bx1) { $bx1 = $x }
+            if ($y -lt $by0) { $by0 = $y }; if ($y -gt $by1) { $by1 = $y }
+        }
+    }
+}
+$mb.Dispose()
+$bw = [double]($bx1 - $bx0 + 1); $bh = [double]($by1 - $by0 + 1)
+Write-Host ('  母图包围盒: X {0}~{1}  Y {2}~{3}（{4:N0}x{5:N0}）' -f $bx0, $bx1, $by0, $by1, $bw, $bh)
 
 foreach ($d in $dens.Keys) {
     $dir = Join-Path $androidOut ('mipmap-' + $d)
@@ -172,8 +188,14 @@ foreach ($d in $dens.Keys) {
     $g.Clear([System.Drawing.Color]::Transparent)
     $g.InterpolationMode = 'HighQualityBicubic'
     $g.SmoothingMode = 'AntiAlias'
-    $off = [int](($canvas - $inner) / 2)
-    $g.DrawImage($masterImg, $off, $off, $inner, $inner)
+    # 按包围盒缩放：让**图形本身**（而不是画布）落进安全区并居中
+    $sc = $inner / [Math]::Max($bw, $bh)
+    $dw = $bw * $sc; $dh = $bh * $sc
+    $dx = ($canvas - $dw) / 2.0; $dy = ($canvas - $dh) / 2.0
+    $g.DrawImage($masterImg,
+        (New-Object System.Drawing.RectangleF($dx, $dy, $dw, $dh)),
+        (New-Object System.Drawing.RectangleF($bx0, $by0, $bw, $bh)),
+        [System.Drawing.GraphicsUnit]::Pixel)
     $g.Dispose()
     $fg.Save((Join-Path $dir 'ic_launcher_foreground.png'), [System.Drawing.Imaging.ImageFormat]::Png)
     $fg.Dispose()
@@ -187,7 +209,12 @@ foreach ($d in $dens.Keys) {
     $g2.Clear([System.Drawing.Color]::Transparent)
     $g2.InterpolationMode = 'HighQualityBicubic'
     $g2.SmoothingMode = 'AntiAlias'
-    $g2.DrawImage($masterImg, 0, 0, $legacy, $legacy)
+    $sc2 = $legacy / [Math]::Max($bw, $bh)
+    $dw2 = $bw * $sc2; $dh2 = $bh * $sc2
+    $g2.DrawImage($masterImg,
+        (New-Object System.Drawing.RectangleF((($legacy - $dw2) / 2.0), (($legacy - $dh2) / 2.0), $dw2, $dh2)),
+        (New-Object System.Drawing.RectangleF($bx0, $by0, $bw, $bh)),
+        [System.Drawing.GraphicsUnit]::Pixel)
     $g2.Dispose()
     $lg.Save((Join-Path $dir 'ic_launcher.png'), [System.Drawing.Imaging.ImageFormat]::Png)
     $lg.Save((Join-Path $dir 'ic_launcher_round.png'), [System.Drawing.Imaging.ImageFormat]::Png)

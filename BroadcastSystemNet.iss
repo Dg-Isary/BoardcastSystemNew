@@ -8,7 +8,7 @@
 ; 版本号：由 tools\build-release.ps1 从 BroadcastSystemNet.csproj 的 <Version> 读出后用 /DAppVersion= 传入，
 ; 做到"只改 csproj 一处"；如果手工直接编译本脚本（没传参数），就用下面的默认值。
 #ifndef AppVersion
-  #define AppVersion "4.1.1"
+  #define AppVersion "4.1.2"
 #endif
 ; 输出文件名：默认 BroadcastSystem_Setup_v{版本}。
 ; 开源构建由 tools\build-release.ps1 传 /DOutputBase=... 覆盖成
