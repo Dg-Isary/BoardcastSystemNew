@@ -74,6 +74,14 @@ if (-not $SkipDesktop) {
     Step ('[1/4] 闭源 桌面安装包  ->  Output\' + (Split-Path $setupClosed -Leaf))
     $a = @('-Root', $Root)
     if ($SkipSelfTest) { $a += '-SkipSelfTest' }
+    # 【图标统一】闭源版也用开源图标（third_party\Opensource.svg 转制）作为**程序图标**；
+    # 只有 favicon.ico / favicon.svg 保持闭源原样（用户明确要求）。
+    $sharedIco = Join-Path $Root 'tools\opensource\icons\app.ico'
+    if (-not (Test-Path $sharedIco)) {
+        $mk = Join-Path $Root 'tools\make-icons.ps1'
+        if (Test-Path $mk) { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $mk -Root $Root 2>&1 | Out-Null }
+    }
+    if (Test-Path $sharedIco) { $a += @('-IconOverride', $sharedIco); Write-Host ('  程序图标: ' + $sharedIco) -ForegroundColor DarkGray }
 # 开源包用**占位图标**（脚本会先备份真图标、构建完自动恢复），这样开源包与闭源包确实不同，
 # 也符合"从公开源码构建"的语义（真图标不入库）。
 if (-not $SkipAndroid) { $a += '-ForcePlaceholderIcons' }
