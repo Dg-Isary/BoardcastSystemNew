@@ -163,5 +163,8 @@ if ($failed.Count -gt 0) {
     exit 1
 }
 Write-Host '三个包全部产出完成。'
-if () { try { .ReleaseMutex() } catch {} ; .Dispose() } -ForegroundColor Green
+if ($buildMutex) {
+    try { $buildMutex.ReleaseMutex() } catch { }
+    $buildMutex.Dispose()
+}
 exit 0
