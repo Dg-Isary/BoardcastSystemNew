@@ -10,7 +10,7 @@
 #   powershell -ExecutionPolicy Bypass -File .\tools\publish-snapshot.ps1
 #   ... -DryRun                 只扫描 + 重建本地 public，不推送
 #   ... -Message "自定义提交信息"
-#   ... -Proxy "http://192.168.112.90:17897"    本机无外网时走代理
+#   ... -Proxy "http://proxy-host:port"    本机无外网时走代理
 #
 # 注意：本文件必须保存为 UTF-8 带 BOM（build-release.ps1 的脚本自检会检查）。
 
