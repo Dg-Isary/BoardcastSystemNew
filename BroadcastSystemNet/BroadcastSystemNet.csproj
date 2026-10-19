@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows</TargetFramework>
@@ -8,7 +8,7 @@
 		<!-- 桌面客户端使用 WPF（纯 C#/.NET，无外部运行时依赖），与后端同一进程 -->
 		<UseWPF>true</UseWPF>
 		<EnableDefaultContentItems>false</EnableDefaultContentItems>
-		<ApplicationIcon>broadcasting.ico</ApplicationIcon>
+		<ApplicationIcon>..\tools\opensource\icons\app.ico</ApplicationIcon>
 		<!-- Per-Monitor DPI 感知（app.manifest）。不加它时进程是 DPI 虚拟化的：
 		     系统缩放 150%/175% 下 WPF 拿到的是被位图拉伸的尺寸，界面显小、按钮与"保存"容易被挤出可见区。 -->
 		<ApplicationManifest>app.manifest</ApplicationManifest>
