@@ -123,7 +123,7 @@ try {
         # 该标签引用的整条**私有历史**一起推到远程 —— 等于把敏感内容全公开。
         # 所以这里显式把标签打在 `public` 分支（= 刚推上去的快照提交）上。
         if ($Tag) {
-            & $git tag -d $Tag --quiet 2>$null
+            & $git tag -d $Tag 2>$null | Out-Null
             & $git tag -s $Tag -m $Tag public 2>$null
             if ($LASTEXITCODE -ne 0) {
                 Write-Host '  签名标签失败（GPG 未就绪？），回退为普通标签' -ForegroundColor Yellow

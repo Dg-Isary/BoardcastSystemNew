@@ -249,6 +249,19 @@ $favicon = Join-Path $Root 'BroadcastSystemNet\res\favicon.ico'
 if (-not (Test-Path $favicon)) { New-BlankIco -Path $favicon; Ok '已生成 res\favicon.ico（占位）' }
 else { Info 'res\favicon.ico 已存在，保留不动' }
 
+    # 【开源图标】把 third_party\Opensource.svg 转制成 ICO / 安卓自适应图标（含安全区）
+    $mk = Join-Path $Root 'tools\make-icons.ps1'
+    $iconOut = Join-Path $Root 'tools\opensource\icons'
+    if (Test-Path $mk) {
+        Info '正在把 third_party\Opensource.svg 转制成开源图标（ICO + 安卓自适应）...'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $mk -Root $Root 2>&1 |
+            Select-String -Pattern 'OK|重试|★' | ForEach-Object { Write-Host ('    ' + $_.Line.Trim()) -ForegroundColor DarkGray }
+        if (Test-Path (Join-Path $iconOut 'app.ico')) {
+            $IconFile = Join-Path $iconOut 'app.ico'
+            Ok ('开源图标已就绪，程序图标改用 ' + $IconFile)
+        } else { Warn '开源图标生成失败，回退占位图标' }
+    } else { Warn ('找不到 ' + $mk + '，回退占位图标') }
+
 # ================================================================ 3. ffmpeg
 # ffmpeg 是**电脑端**依赖（打铃/喊话的播放器），且按合规要求不进 git。
 # 只构建安卓端时必须整段跳过 —— 否则纯 APK 构建会卡在"找不到 ffmpeg"上（GitHub Actions 就踩了这个）。
@@ -556,6 +569,20 @@ if ($needAndroid) {
                     (New-Object System.Text.UTF8Encoding($false)))
             }
             Ok '已生成安卓占位启动图标（5 个密度 + 自适应 XML）'
+            # 【开源图标】用 third_party\Opensource.svg 转制好的安卓图标覆盖占位图
+            # （前景层已按规范缩到中央 66/108 安全区，不会被各厂商遮罩裁掉）
+            $genAndroid = Join-Path $Root 'tools\opensource\icons\android'
+            if (Test-Path $genAndroid) {
+                foreach ($d in @('mipmap-mdpi','mipmap-hdpi','mipmap-xhdpi','mipmap-xxhdpi','mipmap-xxxhdpi','mipmap-anydpi-v26','values')) {
+                    $s = Join-Path $genAndroid $d
+                    if (Test-Path $s) {
+                        $dst = Join-Path $resRoot $d
+                        if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Force -Path $dst | Out-Null }
+                        Copy-Item (Join-Path $s '*') $dst -Recurse -Force -ErrorAction SilentlyContinue
+                    }
+                }
+                Ok '已把安卓启动图标换成开源图标（前景按安全区 66/108 缩放）'
+            }
             [void]$script:Notes.Add('安卓启动图标为脚本生成的占位图（mipmap-* 未入库）')
         } else { Info '安卓启动图标已存在，保留不动' }
 
