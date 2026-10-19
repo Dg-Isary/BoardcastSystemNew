@@ -4,8 +4,8 @@
 
 | 项 | 值 |
 |---|---|
-| 当前版本 | **4.0.0** |
-| 电脑端安装包 | `Output\BroadcastSystem_Setup_v4.0.0.exe` |
+| 当前版本 | **4.1.0** |
+| 电脑端安装包 | `Output\BroadcastSystem_Setup_v4.1.0.exe` |
 | 手机端 | `dist\BroadcastApp.apk`（`versionCode=4`、`versionName=4.0`） |
 | 版本号唯一来源 | `BroadcastSystemNet\BroadcastSystemNet.csproj` 的 `<Version>` |
 

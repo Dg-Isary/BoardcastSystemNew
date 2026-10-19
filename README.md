@@ -11,7 +11,7 @@
 - **网页看板**：电脑端自带，同一局域网内任何设备打开浏览器即可控制
 - **手机端**：Kotlin / Jetpack Compose（Android 8.0+），经内置 vnt-lite 组网隧道接入，不需要虚拟网卡、不需要管理员权限
 
-> 当前版本 **4.0.0**。版本历史与兼容性说明见 [VERSION.md](VERSION.md)。
+> 当前版本 **4.1.0**。版本历史与兼容性说明见 [VERSION.md](VERSION.md)。
 
 ### 界面速览
 
@@ -338,7 +338,7 @@
 
 ## 四、安装与升级
 
-1. 在主机上运行安装包 `BroadcastSystem_Setup_v4.0.0.exe`；
+1. 在主机上运行安装包 `BroadcastSystem_Setup_v4.1.0.exe`；
 2. 安装程序会申请管理员权限（安装到 `Program Files`），并可选创建桌面快捷方式；
 3. 安装完成后会自动创建开机自启项与托盘图标；
 4. 首次启动即自动建好数据目录与默认配置，网页看板默认监听 **5000** 端口（可在「系统设置」里改，程序会自动选可用端口）。
@@ -438,7 +438,7 @@
 全新克隆**不需要手工准备任何资源** —— 未入库的图标、ffmpeg、铃声、安卓启动图标都由脚本自动补齐。
 
 ```powershell
-# 两端都构建（输出 Output\BroadcastSystem_Setup_v4.0.0.exe 与 dist\BroadcastApp.apk）
+# 两端都构建（输出 Output\BroadcastSystem_Setup_v4.1.0.exe 与 dist\BroadcastApp.apk）
 powershell -ExecutionPolicy Bypass -File .\tools\build-opensource.ps1
 
 # 只构建一端

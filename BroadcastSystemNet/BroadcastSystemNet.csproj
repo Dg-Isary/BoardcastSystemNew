@@ -24,7 +24,7 @@
 		<RollForward>LatestMajor</RollForward>
 		<!-- 版本号的唯一来源：界面「关于」读程序集信息，安装脚本由 tools\build-release.ps1 传入同一个值。
 		     改版本只改这里一处，避免界面与安装包版本号不一致。 -->
-		<Version>4.0.0</Version>
+		<Version>4.1.0</Version>
 		<InformationalVersion>4.0.0</InformationalVersion>
 		<!-- 中间/输出目录一律不作为源码：默认排除项在"重定向中间目录"时会失效，
 		     导致老 obj 里生成的 AssemblyInfo.cs 被重复编译（CS0579 特性重复）。这里显式补上。 -->

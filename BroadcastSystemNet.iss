@@ -8,7 +8,7 @@
 ; 版本号：由 tools\build-release.ps1 从 BroadcastSystemNet.csproj 的 <Version> 读出后用 /DAppVersion= 传入，
 ; 做到"只改 csproj 一处"；如果手工直接编译本脚本（没传参数），就用下面的默认值。
 #ifndef AppVersion
-  #define AppVersion "4.0.0"
+  #define AppVersion "4.1.0"
 #endif
 ; 输出文件名：默认 BroadcastSystem_Setup_v{版本}。
 ; 开源构建由 tools\build-release.ps1 传 /DOutputBase=... 覆盖成
@@ -19,7 +19,7 @@
 AppName=智能校园广播系统
 AppVersion={#AppVersion}
 AppPublisher=Designed by Isary
-AppVerName=智能校园广播系统 4.0
+AppVerName=智能校园广播系统 4.1
 AppId={{C177B88C-0D3B-422E-A3CC-BF00AEB105EC}
 ; 明确告诉 Inno Setup：我知道我在用当前用户的 AppData，不要再弹警告了
 UsedUserAreasWarning=no
