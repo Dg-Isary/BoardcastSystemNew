@@ -142,3 +142,6 @@ dist/
 **/__pycache__/
 *.pyc
 /.build-all*.log
+
+# 开源版图标源（用户自制、无版权，必须入库；上面的 *.svg 会误伤它）
+!third_party/Opensource.svg

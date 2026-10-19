@@ -98,8 +98,13 @@ try {
     }
     & $git add -A
     if (-not $Message) { $Message = '快照：智能校园广播系统（开源快照）' }
-    & $git commit --quiet -m $Message
-    if ($LASTEXITCODE -ne 0) { Write-Host '  提交失败（没有改动？）' -ForegroundColor Red; exit 1 }
+    # 树没变化时 git commit 会失败（nothing to commit）。这种情况**不算错误**：
+    # 说明快照内容已是最新，直接复用 origin/main 那个提交去打标签即可。
+    & $git commit --quiet -m $Message 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host '  内容与上一次快照相同，不产生新提交（直接用现有快照提交打标签）' -ForegroundColor DarkGray
+        & $git reset --hard 'origin/main' --quiet
+    }
     $cnt = @(& $git rev-list --count public)
     $files = @(& $git ls-tree -r --name-only public).Count
     Write-Host ('  提交数 ' + $cnt + '，文件数 ' + $files) -ForegroundColor Green

@@ -426,7 +426,12 @@ if (-not $AndroidOnly) {
     # 而脚本对它是"存在就保留" -> 打出来的开源包里带的就是真图标（可能有版权）。
     # 只覆盖 publish\res\favicon.ico，源码树不动，所以不需要备份/恢复。
     if (Test-Path (Join-Path $pub 'res')) {
-        New-BlankIco -Path (Join-Path $pub 'res\favicon.ico')
+        # 优先用开源图标（SVG 转制）；没有才回退占位图
+        $srcIco = Join-Path $iconOut 'app.ico'
+        $srcSvg = Join-Path $iconOut 'favicon.svg'
+        if (Test-Path $srcIco) { Copy-Item $srcIco (Join-Path $pub 'res\favicon.ico') -Force }
+        else { New-BlankIco -Path (Join-Path $pub 'res\favicon.ico') }
+        if (Test-Path $srcSvg) { Copy-Item $srcSvg (Join-Path $pub 'res\favicon.svg') -Force }
         Ok '已把发布产物里的 res\favicon.ico 换成占位图（避免带上可能有版权的真图标）'
     }
 
