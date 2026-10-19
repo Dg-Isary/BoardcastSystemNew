@@ -103,7 +103,21 @@ jobs:
           CBS_KEYSTORE_B64: ${{ secrets.CBS_KEYSTORE }}
         run: |
           $path = Join-Path $env:RUNNER_TEMP 'cbs-release.jks'
-          [System.IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($env:CBS_KEYSTORE_B64))
+          # 宽容处理：去掉所有空白/换行（手工粘贴常带换行）
+          $b64 = ($env:CBS_KEYSTORE_B64 -replace '\s', '')
+          if ($b64.Length -lt 500) {
+            throw ("CBS_KEYSTORE 看起来不是 base64（长度 " + $b64.Length + "）。" +
+                   "应粘贴 cbs-release.jks.base64.txt 的**文件全文**（约 3652 字符），" +
+                   "不是文件路径、也不是'长度 3652 字符'这类说明文字。")
+          }
+          try {
+            $bytes = [Convert]::FromBase64String($b64)
+          } catch {
+            throw ("CBS_KEYSTORE 不是合法 base64（长度 " + $b64.Length + "）。" +
+                   "请用命令重新复制：Get-Content $env:USERPROFILE\cbs-release.jks.base64.txt -Raw | Set-Clipboard")
+          }
+          [System.IO.File]::WriteAllBytes($path, $bytes)
+          Write-Host ("keystore restored: " + $bytes.Length + " bytes")
           "CBS_KEYSTORE=$path" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: 构建 APK
