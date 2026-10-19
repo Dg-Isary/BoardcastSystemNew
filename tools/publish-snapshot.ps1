@@ -128,7 +128,10 @@ try {
         # 该标签引用的整条**私有历史**一起推到远程 —— 等于把敏感内容全公开。
         # 所以这里显式把标签打在 `public` 分支（= 刚推上去的快照提交）上。
         if ($Tag) {
-            & $git tag -d $Tag 2>$null | Out-Null
+            # 标签不存在时 git tag -d 会报 "not found"，在 Stop 下会终止脚本 -> 临时放宽
+            $eapT = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+            & $git tag -d $Tag 2>&1 | Out-Null
+            $ErrorActionPreference = $eapT
             & $git tag -s $Tag -m $Tag public 2>$null
             if ($LASTEXITCODE -ne 0) {
                 Write-Host '  签名标签失败（GPG 未就绪？），回退为普通标签' -ForegroundColor Yellow

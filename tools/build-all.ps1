@@ -82,9 +82,9 @@ if (-not $SkipDesktop) {
         if (Test-Path $mk) { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $mk -Root $Root 2>&1 | Out-Null }
     }
     if (Test-Path $sharedIco) { $a += @('-IconOverride', $sharedIco); Write-Host ('  程序图标: ' + $sharedIco) -ForegroundColor DarkGray }
-# 开源包用**占位图标**（脚本会先备份真图标、构建完自动恢复），这样开源包与闭源包确实不同，
-# 也符合"从公开源码构建"的语义（真图标不入库）。
-if (-not $SkipAndroid) { $a += '-ForcePlaceholderIcons' }
+# 【不再重复打 APK】图标入库后，闭源与开源 APK 完全一致（同源码、同图标、同签名），
+# 分开打只是白跑一遍 gradle。所以开源这边只出桌面安装包。
+$a += '-DesktopOnly'
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir 'build-release.ps1') @a
     if ($LASTEXITCODE -ne 0) { $failed += '闭源桌面安装包（脚本失败）' }
     elseif (-not (Test-Path $setupClosed)) { $failed += '闭源桌面安装包（没有产物）' }
@@ -104,22 +104,22 @@ $a = @()
 if ($SkipDesktop) { $a += '-AndroidOnly' }
 if ($SkipAndroid) { $a += '-DesktopOnly' }
 if ($SkipSelfTest) { $a += '-SkipSelfTest' }
-# 开源包用**占位图标**（脚本会先备份真图标、构建完自动恢复），这样开源包与闭源包确实不同，
-# 也符合"从公开源码构建"的语义（真图标不入库）。
-if (-not $SkipAndroid) { $a += '-ForcePlaceholderIcons' }
+# 【不再重复打 APK】图标入库后，闭源与开源 APK 完全一致（同源码、同图标、同签名），
+# 分开打只是白跑一遍 gradle。所以开源这边只出桌面安装包。
+$a += '-DesktopOnly'
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $toolsDir 'build-opensource.ps1') @a
 if ($LASTEXITCODE -ne 0) { $failed += '开源构建（脚本失败）' }
 else {
     if (-not $SkipDesktop -and -not (Test-Path $setupOpen))    { $failed += '开源桌面安装包（没有产物）' }
-    if (-not $SkipAndroid -and -not (AssertApkCopied $apkOpen)) { $failed += '开源安卓 APK（产物与 gradle 不一致）' }
+
 }
 
 # ---------- 汇总 ----------
 Write-Host ''
 Write-Host '############################################################' -ForegroundColor DarkCyan
-Write-Host ('#  四个发布包（版本 ' + $appVersion + '）') -ForegroundColor DarkCyan
+Write-Host ('#  三个发布包（版本 ' + $appVersion + '）') -ForegroundColor DarkCyan
 Write-Host '############################################################' -ForegroundColor DarkCyan
-foreach ($p in @($setupClosed, $setupOpen, $apkClosed, $apkOpen)) {
+foreach ($p in @($setupClosed, $setupOpen, $apkClosed)) {
     $rel = $p.Replace($Root + '\', '')
     if (Test-Path $p) {
         $f = Get-Item $p
@@ -134,5 +134,5 @@ if ($failed.Count -gt 0) {
     Write-Host ('构建失败：' + ($failed -join '；')) -ForegroundColor Red
     exit 1
 }
-Write-Host '四个包全部产出完成。' -ForegroundColor Green
+Write-Host '三个包全部产出完成。' -ForegroundColor Green
 exit 0
