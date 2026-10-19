@@ -145,3 +145,14 @@ dist/
 
 # 开源版图标源（用户自制、无版权，必须入库；上面的 *.svg 会误伤它）
 !third_party/Opensource.svg
+# ---------- 开源图标入库（源自 third_party/Opensource.svg，用户自制无版权）----------
+# 之前 ico/svg/png 一律不入库（怕带版权素材）；这套图标是自制的，入库后 CI 不必再渲染，
+# 也就不用依赖 Chrome 了。注意：要让 git 认到子目录里的文件，必须先把**目录本身**放行。
+!/tools/opensource/icons/
+!/tools/opensource/icons/**
+!/BroadcastApp/android/app/src/main/res/mipmap-mdpi/
+!/BroadcastApp/android/app/src/main/res/mipmap-hdpi/
+!/BroadcastApp/android/app/src/main/res/mipmap-xhdpi/
+!/BroadcastApp/android/app/src/main/res/mipmap-xxhdpi/
+!/BroadcastApp/android/app/src/main/res/mipmap-xxxhdpi/
+!/BroadcastApp/android/app/src/main/res/mipmap-anydpi-v26/

@@ -252,7 +252,12 @@ else { Info 'res\favicon.ico 已存在，保留不动' }
     # 【开源图标】把 third_party\Opensource.svg 转制成 ICO / 安卓自适应图标（含安全区）
     $mk = Join-Path $Root 'tools\make-icons.ps1'
     $iconOut = Join-Path $Root 'tools\opensource\icons'
-    if (Test-Path $mk) {
+    $haveIcons = Test-Path (Join-Path $iconOut 'app.ico')
+    if ($haveIcons) {
+        # 图标已入库（tools\opensource\icons\），直接用，不必现场渲染 —— 这样 CI 也不需要 Chrome
+        Ok ('使用已入库的开源图标: ' + (Join-Path $iconOut 'app.ico'))
+        $IconFile = Join-Path $iconOut 'app.ico'
+    } elseif (Test-Path $mk) {
         Info '正在把 third_party\Opensource.svg 转制成开源图标（ICO + 安卓自适应）...'
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $mk -Root $Root 2>&1 |
             Select-String -Pattern 'OK|重试|★' | ForEach-Object { Write-Host ('    ' + $_.Line.Trim()) -ForegroundColor DarkGray }
