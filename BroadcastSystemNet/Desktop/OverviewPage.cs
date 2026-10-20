@@ -117,8 +117,19 @@ namespace BroadcastSystemNet.Desktop
             _micCode = new TextBlock
             {
                 Text = "—— —— ——", FontSize = 34, FontWeight = FontWeights.Bold,
-                Foreground = Theme.Primary, Margin = new Thickness(0, 2, 0, 2)
+                Foreground = Theme.Primary,
+                // 【底部留白】大字号文本的"墨迹"会略微溢出它自己的行框，而下一行是**后绘制**的，
+                // 会把溢出的下边缘盖住几个像素（用户反馈"配对码下边缘被遮挡"）。
+                // 原来只留 2px，不够；这里加到 10px，给字形底部留出余量。
+                Margin = new Thickness(0, 2, 0, 10)
             };
+            // 【字形平滑】主窗口整体用 TextFormattingMode.Display（按像素对齐，小字更实），
+            // 但 34px 粗体数字在 Display 下竖笔画会落在半像素上，边缘出现粗细不匀的台阶。
+            // 这一处单独用 Ideal（亚像素定位）+ 关闭布局取整，边缘过渡更平滑；
+            // 注意透明窗口上 WPF 会禁用 ClearType，所以仍是灰度抗锯齿，这是本方案的平滑上限。
+            System.Windows.Media.TextOptions.SetTextFormattingMode(
+                _micCode, System.Windows.Media.TextFormattingMode.Ideal);
+            _micCode.UseLayoutRounding = false;
             mic.Children.Add(_micCode);
             mic.Children.Add(_micText);
             mic.Children.Add(Theme.Row(

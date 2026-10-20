@@ -24,7 +24,7 @@ namespace BroadcastSystemNet.Desktop
     public sealed class AboutDialog : Window
     {
         /// <summary>项目地址（点击用默认浏览器打开）。</summary>
-        public const string GitHubUrl = "https://github.com/Dg-Isary/BroadcastSystemNet";
+        public const string GitHubUrl = "https://github.com/Dg-Isary/BoardcastSystemNew";
 
         /// <summary>离线自检命令：不需要界面、不改配置，跑完打印逐项结果。</summary>
         public const string SelfTestCommand = "BroadcastSystemNet.exe --self-test";
@@ -49,15 +49,36 @@ namespace BroadcastSystemNet.Desktop
             catch { return "未知"; }
         }
 
+        /// <summary>
+        /// 编译时间（由 csproj 的 GenerateBuildInfo 目标在每次编译时写入 BuildInfo.g.cs）。
+        /// 用它区分"同一个版本号的不同构建"：现场排查时先看这个时间，能立刻判断
+        /// 用户装的是不是我们刚发的那一版，省掉一轮来回问。
+        /// </summary>
+        public static string BuiltAt()
+        {
+            try
+            {
+                // 由 csproj 的 <AssemblyMetadata Include="Built" .../> 生成，SDK 会产出
+                // [assembly: AssemblyMetadata("Built", "yyyy-MM-dd HH:mm")]。
+                var hit = Assembly.GetExecutingAssembly()
+                    .GetCustomAttributes<AssemblyMetadataAttribute>()
+                    .FirstOrDefault(x => x != null && x.Key == "Built");
+                return hit == null || string.IsNullOrWhiteSpace(hit.Value) ? "未知" : hit.Value;
+            }
+            catch { return "未知"; }
+        }
+
         /// <summary>引用的第三方组件（界面/网页/加密/音频）。</summary>
         static readonly (string Name, string Note)[] Refs =
         {
             ("Font Awesome Free 6.4.0", "界面与网页图标（字体 SIL OFL 1.1 / 代码 MIT）"),
             ("Chart.js 4.4.1", "网页实时波形图（MIT）"),
             ("flatpickr 4.6.13", "网页日期选择（MIT）"),
-            ("BouncyCastle.Cryptography", "加密算法 2.6.2（MIT）"),
-            ("FFmpeg / FFplay / FFprobe", "音频播放与响度归一（随程序打包）"),
+            ("BouncyCastle.Cryptography 2.6.2", "加密算法（MIT）"),
+            ("FFmpeg / FFplay / FFprobe", "音频播放与响度归一（随程序打包，LGPL 构建，独立可执行文件分发）"),
             (".NET 8 (WPF + ASP.NET Core)", "运行时与内置 Web 服务（MIT）"),
+            ("本程序图标", "自制矢量图，无版权限制（source: third_party/Opensource.svg）"),
+            ("铃声资源库", "初始铃声（可选组件，由构建脚本从独立仓库获取）"),
             // 开发过程中用过的 AI 工具（列在这里，取代原先底部那行署名）
             ("Gemini Pro", "早期版本的开发与设计协助"),
             ("DeepSeek Harness", "当前版本的开发协助"),
@@ -127,7 +148,9 @@ namespace BroadcastSystemNet.Desktop
 
             top.Children.Add(new TextBlock
             {
-                Text = "版本 " + AppVersion(),
+                // 版本号 + 编译时间：同一个版本号可能被重新构建多次（改图标、改文案都会重编），
+                // 光有 4.1.2 分不清是哪个构建产物，加上"编译于"就一目了然。
+                Text = "版本 " + AppVersion() + "　·　编译于 " + BuiltAt(),
                 FontSize = 13,
                 Foreground = Theme.TextGray,
                 Margin = new Thickness(27, 4, 0, 0)

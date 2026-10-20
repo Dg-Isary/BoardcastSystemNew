@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows</TargetFramework>
@@ -25,7 +25,10 @@
 		<!-- 版本号的唯一来源：界面「关于」读程序集信息，安装脚本由 tools\build-release.ps1 传入同一个值。
 		     改版本只改这里一处，避免界面与安装包版本号不一致。 -->
 		<Version>4.1.2</Version>
-		<InformationalVersion>4.0.0</InformationalVersion>
+		<!-- 【已删除一个 bug 源】这里原来硬写着 <InformationalVersion>4.0.0</InformationalVersion>，
+		     而 desktop 的「关于」读的正是 InformationalVersion —— 它比 Version 旧，于是界面一直显示 4.0.0，
+		     bump-version 只改 Version 也修不到它。现在不写，交给 SDK 按 Version 自动生成（4.1.2+<提交号>），
+		     「关于」里的 AppVersion() 会在 '+' 处截断，显示 4.1.2。 -->
 		<!-- 中间/输出目录一律不作为源码：默认排除项在"重定向中间目录"时会失效，
 		     导致老 obj 里生成的 AssemblyInfo.cs 被重复编译（CS0579 特性重复）。这里显式补上。 -->
 		<DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**</DefaultItemExcludes>
@@ -55,7 +58,24 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Content Include="broadcasting.ico" />
+		<!-- broadcasting.ico 已删除：程序图标改为 ..\tools\opensource\icons\app.ico（见 ApplicationIcon）。
+		     留着这条 <Content Include> 会指向一个不存在的文件，属于陈旧的残留项。 -->
+	</ItemGroup>
+
+	<!--
+	  编译时间戳：「关于」里显示"版本 x.y.z　·　编译于 …"。
+	  实现方式：把时间写进 AssemblyMetadata（SDK 会生成 [assembly: AssemblyMetadata("Built","…")]），
+	  代码里用反射读 —— 不用生成 .cs 文件。
+	  为什么不用 SourceRevisionId：它只在 git 仓库里可用，CI 的快照仓库/离线拷贝不一定有 .git；
+	  为什么不在 Target 里 <Compile Include> 生成文件：@(Compile) 在 CoreCompile 之前已被快照，
+	  后加进去的项编译器看不到（实测 CS0103: 不存在名称 BuildInfo）。
+	  属性在**求值时**展开，每次重新编译都会刷新；增量构建跳过编译时保留上次的值，符合预期。
+	-->
+	<PropertyGroup>
+		<_BuildStamp>$([System.DateTime]::Now.ToString('yyyy-MM-dd HH:mm'))</_BuildStamp>
+	</PropertyGroup>
+	<ItemGroup>
+		<AssemblyMetadata Include="Built" Value="$(_BuildStamp)" />
 	</ItemGroup>
 
 	<!--

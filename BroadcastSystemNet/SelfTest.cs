@@ -887,6 +887,17 @@ namespace BroadcastSystemNet
                 string r2 = Desktop.AboutDialog.CheckFooterVisibleForTest(wh[0], wh[1]);
                 Check(r2.StartsWith("OK"), $"关于窗 {wh[0]:F0}×{wh[1]:F0} 下关闭按钮仍在可视区", r2);
             }
+
+            // 关于页的版本号与编译时间：这两项以前踩过坑 ——
+            // csproj 里硬写着一个陈旧的 <InformationalVersion>4.0.0</InformationalVersion>，
+            // 而「关于」读的正是它，于是界面长期显示 4.0.0（与安装包版本号不一致）。
+            string ver = Desktop.AboutDialog.AppVersion();
+            Check(!string.IsNullOrWhiteSpace(ver) && ver != "未知", "关于页能读到版本号", "版本=" + ver);
+            Check(ver != "4.0.0", "关于页版本号不是那个陈旧的 4.0.0", "版本=" + ver);
+            string built = Desktop.AboutDialog.BuiltAt();
+            Check(built != "未知" && built.Length >= 10, "关于页能读到编译时间（AssemblyMetadata Built）", "编译于=" + built);
+            Check(Desktop.AboutDialog.GitHubUrl.Contains("BoardcastSystemNew"),
+                "关于页的项目地址指向当前公开仓库", Desktop.AboutDialog.GitHubUrl);
             Console.WriteLine();
         }
 
