@@ -82,10 +82,12 @@ namespace BroadcastSystemNet.Desktop
         {
             try
             {
-                string code = MicProtocol.CurrentCode(VntManager.MicCodeSeed, DateTime.UtcNow);
-                int left = (int)(MicProtocol.CodePeriodSeconds - (DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond % MicProtocol.CodePeriodSeconds));
+                // 统一走 CurrentCodeUtc：与 /api/mic/code 同一时钟、同一入口，两端不会再算出不同的码。
+                string code = MicProtocol.CurrentCodeUtc(VntManager.MicCodeSeed);
+                int left = MicProtocol.SecondsLeftUtc();
                 _micCode.Text = code.Length == 6 ? code.Substring(0, 3) + " " + code.Substring(3) : code;
-                _micText.Text = $"手机上输这 6 位即可配对；剩余 {left} 秒自动换码，一码只能用一次"
+                // 文案与手机端管理员面板保持一致：同一窗口只能用一次，换码后旧码立即失效。
+                _micText.Text = $"手机端管理员面板显示的码与此处相同；剩余 {left} 秒换码，同一窗口只能配对一次"
                     + $"\n话筒服务：{(MicServer.Running ? "在跑" : "未启动")}　已接入：{MicServer.Registry.Count} 台";
             }
             catch (Exception ex) { _micText.Text = "读取话筒状态失败：" + ex.Message; }

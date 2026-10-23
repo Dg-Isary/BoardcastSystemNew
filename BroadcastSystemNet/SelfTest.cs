@@ -1435,6 +1435,31 @@ namespace BroadcastSystemNet
             Check(MicProtocol.CurrentCode("seed-A", t0) != MicProtocol.CurrentCode("seed-B", t0),
                 "不同会话种子产生不同动态码");
 
+            // 【两端一致】统一入口 CurrentCodeUtc 必须与"电脑端界面/手机端 API"那条路径算出同一个码。
+            // 历史 bug：/api/mic/code 用 DateTime.Now、界面用 DateTime.UtcNow，靠 WindowIndex 内部
+            // ToUniversalTime 兜底；只要有一处传错（Kind=Utc 再转换、机器时区被改）两端就显示不同的码。
+            // 现在只留 CurrentCodeUtc 一个入口，这里把"同一时刻不同取法"钉死。
+            var nowUtc = DateTime.UtcNow;
+            string viaUnified = MicProtocol.CurrentCodeUtc(micSeed);
+            string viaUtcNow = MicProtocol.CurrentCode(micSeed, nowUtc);
+            string viaLocalNow = MicProtocol.CurrentCode(micSeed, DateTime.Now);
+            Check(viaUnified == viaUtcNow, "统一入口(CurrentCodeUtc) 与 UtcNow 取码一致",
+                $"unified={viaUnified} utcNow={viaUtcNow}");
+            Check(viaUnified == viaLocalNow, "统一入口(CurrentCodeUtc) 与本地时间取码一致（时区换算不能出错）",
+                $"unified={viaUnified} localNow={viaLocalNow} tz={TimeZoneInfo.Local.Id}");
+            int sl = MicProtocol.SecondsLeftUtc();
+            Check(sl > 0 && sl <= MicProtocol.CodePeriodSeconds, "剩余秒数在 1..60 之间", sl.ToString());
+            // 种子指纹：同一把种子必须稳定（两端靠它核对），不同种子必须不同
+            Check(MicProtocol.SeedFingerprint(micSeed) == MicProtocol.SeedFingerprint(micSeed)
+                  && MicProtocol.SeedFingerprint("a") != MicProtocol.SeedFingerprint("b")
+                  && MicProtocol.SeedFingerprint(micSeed).Length == 8,
+                "种子指纹稳定且可区分（8 位十六进制）",
+                MicProtocol.SeedFingerprint(micSeed));
+            // 真实种子也要能被反复读取而不变（否则界面和 API 各自生成新种子 → 码永远不一样）
+            string s1 = VntManager.MicCodeSeed, s2 = VntManager.MicCodeSeed;
+            Check(s1 == s2 && s1.Length >= 16, "MicCodeSeed 多次读取保持稳定",
+                $"fp={MicProtocol.SeedFingerprint(s1)} len={s1.Length}");
+
             // RFC 7748 官方向量：手机端（纯 Kotlin X25519）也用同一组向量自检，
             // 两边都对上 → 手机与电脑算出的共享密钥必然一致（这是配对能不能通的关键前提）。
             var rfcPrivA = HexToBytes("77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a");
@@ -1602,6 +1627,17 @@ namespace BroadcastSystemNet
             string nextCode = MicProtocol.CurrentCode("mic-guard-seed", tCode.AddSeconds(61));
             Check(codeStore.TryConsume(nextCode, tCode.AddSeconds(61), out _), "下一个窗口的新动态码可用");
             Check(!codeStore.TryConsume("000000", tCode, out _) || realCode == "000000", "错误动态码被拒绝");
+
+            // 【一次性 = 每台设备每窗口一次】回归：以前按窗口一刀切，导致同一 60 秒内
+            // 第二台设备配不上、手机多通道重试除第一条外全判 bad_code（真机"配对成功 2、失败 11"）。
+            var devStore = new MicSecurity.CodeStore("mic-guard-seed");
+            string sameCode = MicProtocol.CurrentCode("mic-guard-seed", tCode);
+            Check(devStore.TryConsume(sameCode, tCode, "phone-A", out _), "设备A 用当前窗口的码：通过");
+            Check(!devStore.TryConsume(sameCode, tCode, "phone-A", out _), "设备A 再用同一窗口的码：拒绝（防重放）");
+            Check(devStore.TryConsume(sameCode, tCode, "phone-B", out _), "设备B 用同一窗口的码：通过（不再互相挤掉）");
+            Check(!devStore.TryConsume(sameCode, tCode, "phone-B", out _), "设备B 重复使用：拒绝");
+            Check(devStore.TryConsume(sameCode, tCode.AddSeconds(61), "phone-A", out _) == false,
+                "换窗口后旧码失效（跨窗口不通过）");
 
             var reg = new MicSecurity.Registry();
             var sess = reg.Create("10.26.0.9", "mic-phone-01", new byte[32], tBase, maxMinutes: 60);

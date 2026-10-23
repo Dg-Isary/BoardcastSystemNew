@@ -221,9 +221,12 @@ namespace BroadcastSystemNet
                 return res;
             }
 
-            // ④ 动态码：一次性消费（失败计入限速）；**信任设备免动态码**（同一设备配对过一次后，下次免输码）
+            // ④ 动态码：按 (窗口, 设备) 一次性消费（失败计入限速）；**信任设备免动态码**（同一设备配对过一次后，下次免输码）
+            // 注意要传 hello.DeviceId：这样"同一台设备重复用同一窗口的码"仍被拒（防重放），
+            // 但"另一台设备用同一窗口的码"能通过 —— 否则 60 秒内第二台手机永远配不上，
+            // 且手机端多条通道并发重试时，除第一条外都会被判 bad_code（真机"配对成功 2、失败 11"）。
             bool trusted = VntManager.IsTrustedDevice(hello.DeviceId);
-            if (!trusted && (codes == null || !codes.TryConsume(hello.Code, now, out _)))
+            if (!trusted && (codes == null || !codes.TryConsume(hello.Code, now, hello.DeviceId, out _)))
             {
                 bool locked = guard.NoteFailure(sourceIp, now);
                 res.Reason = locked ? Reason.TooMany : Reason.BadCode;

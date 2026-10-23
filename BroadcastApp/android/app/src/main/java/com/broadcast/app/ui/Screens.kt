@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -945,34 +946,9 @@ fun SettingsScreen(state: AppState) {
     var renaming by remember { mutableStateOf<AppState.DeviceEntry?>(null) }
     var deleting by remember { mutableStateOf<AppState.DeviceEntry?>(null) }
     PageColumn {
-        AdminPanel(state)   // 管理员面板：放在设置页**最顶部**（普通设备自动隐藏）
-        // 【广播总开关】停用后：不打铃、所有音频静音（与电脑端/网页端是同一个开关）。
-        // 放在设置页靠前的位置：紧急停用要能一眼找到、一键生效。
-        AppCard {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("广播总开关", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text(
-                        if (state.globalOn) "运行中：定时打铃照常执行" else "已停用：不打铃，所有音频静音",
-                        fontSize = 11.sp,
-                        color = if (state.globalOn) MaterialTheme.colorScheme.onSurfaceVariant
-                                else MaterialTheme.colorScheme.error
-                    )
-                }
-                // 只有管理员设备能操作（电脑端 MicApiBridge 对写接口也有同一道门禁）
-                MiuixSwitchFor(state.globalOn) { on -> state.trySetGlobalSwitch(on) }
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                if (state.isAdminDevice)
-                    "停用后电脑端不会打铃、也不播放任何音频；恢复后照常按排程执行。"
-                else
-                    "只有管理员设备能操作这个开关（当前是普通设备）。停用后电脑端不会打铃、也不播放任何音频。",
-                fontSize = 10.sp,
-                color = if (state.isAdminDevice) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.error
-            )
-        }
+        // 管理员面板（含广播总开关、配对码、话筒设备列表）：普通设备整块隐藏。
+        // 用户要求：总开关也收进管理员区，跟配对码/设备列表一起隐藏，不再单独占一张卡片。
+        AdminPanel(state)
         AppCard {
             SectionTitle("外观 · 主题色（点色块即换，不用看文字）")
             Spacer(Modifier.height(10.dp))
@@ -1326,8 +1302,13 @@ private fun ExportLogButton(state: AppState) {
 
 /**
  * **管理员面板**（用户要求：放手机「设置」页顶部，只对管理员显示）：
- *   ① 当前 6 位配对码（60 秒一换，带剩余秒数）；② 话筒设备列表 + 踢出。
- * 是否显示由电脑端门禁决定：调 `/api/mic/code` 成功 = 管理员；被拒 = 面板整块隐藏（普通设备看不到）。
+ *   ① 广播总开关（紧急停用，放最上面一眼能找到）；
+ *   ② 当前 6 位配对码（60 秒一换，带剩余秒数与进度条）；
+ *   ③ 话筒设备列表 + 踢出。
+ *
+ * 是否显示由电脑端门禁决定：调 `/api/mic/code` 成功 = 管理员；被拒 = **整块隐藏**
+ * （普通设备连总开关都看不到、也点不到）。电脑端 MicApiBridge 对写接口还有第二道门禁，
+ * 所以即使有人绕过界面直接发请求也会被拒。
  */
 @Composable
 private fun AdminPanel(state: AppState) {
@@ -1339,50 +1320,185 @@ private fun AdminPanel(state: AppState) {
     }
     if (!state.isAdminDevice) return
     AppCard {
-        SectionTitle("管理员")
-        Text("配对码（6 位，60 秒一换 · 只有管理员设备能看到）", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // ---------- 标题行 ----------
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            FaIcon("user-shield", size = 15.dp, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "管理员",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            // 小徽章：一眼看出"这些操作只在这台设备上可用"
+            Text(
+                "仅本机",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                    .padding(horizontal = 7.dp, vertical = 2.dp)
+            )
+        }
+        Spacer(Modifier.height(14.dp))
+
+        // ---------- ① 广播总开关 ----------
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("广播总开关", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    if (state.globalOn) "运行中：定时打铃照常执行" else "已停用：不打铃，所有音频静音",
+                    fontSize = 11.sp,
+                    color = if (state.globalOn) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.error
+                )
+            }
+            MiuixSwitchFor(state.globalOn) { on -> state.trySetGlobalSwitch(on) }
+        }
         Spacer(Modifier.height(6.dp))
+        Text(
+            "停用后电脑端不会打铃、也不播放任何音频；恢复后照常按排程执行。",
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(14.dp))
+        ThinDivider()
+        Spacer(Modifier.height(12.dp))
+
+        // ---------- ② 配对码 ----------
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                state.micCode.ifBlank { "------" },
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 6.sp
+                "话筒配对码",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
             )
-            Spacer(Modifier.width(10.dp))
-            Text("${state.micCodeLeft}s", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.weight(1f))
+            Text("${state.micCodeLeft}s 后换码", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(6.dp))
             AppOutlinedButton("刷新", { state.refreshAdminPanel() }, icon = "rotate")
         }
-        Spacer(Modifier.height(10.dp))
-        ThinDivider()
         Spacer(Modifier.height(8.dp))
-        Text("话筒设备（在线 ${state.micDevices.size} 台）", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(4.dp))
+        // 码本体：等宽 + 大字 + 字距，三位一组更好念给对面听
+        val shown = state.micCode.ifBlank { "------" }
+        val pretty = if (shown.length == 6) shown.substring(0, 3) + " " + shown.substring(3) else shown
+        Text(
+            pretty,
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = 4.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        // 剩余时间进度条：比纯数字更直观地提示"快换码了，抓紧输"
+        val period = 60f
+        val frac = (state.micCodeLeft.coerceIn(0, 60) / period)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(frac)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        if (frac < 0.25f) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.primary
+                    )
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "电脑端「运行总览」显示的是同一个码；同一窗口只能配对一次，换码后旧码立即失效。",
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(14.dp))
+        ThinDivider()
+        Spacer(Modifier.height(12.dp))
+
+        // ---------- ③ 话筒设备 ----------
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "话筒设备",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                "在线 ${state.micDevices.size} 台",
+                fontSize = 11.sp,
+                color = if (state.micDevices.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(Modifier.height(6.dp))
         if (state.micDevices.isEmpty()) {
-            Text("（当前没有设备连着话筒）", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "当前没有设备连着话筒",
+                fontSize = 11.5.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         state.micDevices.forEach { d ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "会话${d.optInt("sid")}　${d.optString("device").take(12)}　${d.optString("ip")}" + (if (d.optBoolean("admin")) "　管理员" else ""),
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+            val isAdminDev = d.optBoolean("admin")
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 状态点：在线绿点，管理员用主色
+                Box(
+                    Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(if (isAdminDev) MaterialTheme.colorScheme.primary else SuccessDot)
                 )
-                // 管理员设备不显示"踢出"（用户要求：管理员的话筒设备不用显示踢出标志）。
-                // 逻辑上也对：能把设备设为管理员的，本来就是受信任的设备，没必要在列表里给它一个踢出按钮。
-                if (!d.optBoolean("admin")) {
-                    AppOutlinedButton("踢出", { state.kickMicDevice(d.optInt("sid"), d.optString("device")) }, icon = "stop")
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        d.optString("device").take(16).ifBlank { "未知设备" },
+                        fontSize = 12.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "会话 ${d.optInt("sid")}　${d.optString("ip")}" + if (isAdminDev) "　管理员" else "",
+                        fontSize = 10.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                // 管理员设备不显示"踢出"（用户要求）：能把设备设为管理员的本来就是受信任设备。
+                if (!isAdminDev) {
+                    AppOutlinedButton(
+                        "踢出",
+                        { state.kickMicDevice(d.optInt("sid"), d.optString("device")) },
+                        icon = "stop"
+                    )
                 }
             }
         }
     }
     Spacer(Modifier.height(12.dp))
 }
+
+/** 设备在线状态点颜色（与主题无关的固定绿，保证一眼可辨）。 */
+private val SuccessDot = Color(0xFF34C759)
+
 
 /** 普通权限提示条（用户要求：让"只读"状态一眼可见）。 */
 @Composable

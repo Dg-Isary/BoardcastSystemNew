@@ -204,6 +204,42 @@ namespace BroadcastSystemNet
         public static string CurrentCode(string seed, DateTime now) => CodeForWindow(seed, WindowIndex(now));
 
         /// <summary>
+        /// **统一取码入口**：内部一律用 UTC。
+        ///
+        /// 为什么要有它：以前各处调用点自己传时间 —— 电脑端界面传 DateTime.UtcNow，
+        /// /api/mic/code 传 DateTime.Now（靠 WindowIndex 里的 ToUniversalTime 兜底）。
+        /// 虽然结果应该一样，但只要有一处传错（比如某个环境 DateTime.Now 已经带 Kind=Utc，
+        /// 或者机器时区被改过），两端就会算出**不同的码**，而界面和手机各自显示一个，
+        /// 表现就是"手机端和电脑端验证码不一样"。现在只留这一个入口，杜绝分叉。
+        /// </summary>
+        public static string CurrentCodeUtc(string seed) => CodeForWindow(seed, WindowIndex(DateTime.UtcNow));
+
+        /// <summary>当前窗口还剩多少秒（与 CurrentCodeUtc 严格同一时钟，避免"码换了但秒数没换"）。</summary>
+        public static int SecondsLeftUtc()
+        {
+            long sec = DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond;
+            int left = (int)(CodePeriodSeconds - sec % CodePeriodSeconds);
+            return left <= 0 ? CodePeriodSeconds : left;
+        }
+
+        /// <summary>
+        /// 种子指纹（SHA256 前 8 位十六进制）。只用于**核对两端是否同一把种子**，
+        /// 反推不出种子本身（种子是 32 位随机 GUID，指纹泄露也无害）。
+        /// 排查"手机和电脑验证码不一样"时，手机端 /api/mic/code 返回的 seed_fp
+        /// 与电脑端日志里的值一比即可定位。
+        /// </summary>
+        public static string SeedFingerprint(string seed)
+        {
+            try
+            {
+                using var sha = System.Security.Cryptography.SHA256.Create();
+                var h = sha.ComputeHash(Encoding.UTF8.GetBytes(seed ?? ""));
+                return Convert.ToHexString(h, 0, 4).ToLowerInvariant();
+            }
+            catch { return "?"; }
+        }
+
+        /// <summary>
         /// 校验用户输入的动态码：接受"当前窗口"与"上一个窗口"（给跨窗输入留 60 秒宽限）。
         /// 是否已被用过（一次性）由调用方用 UsedCodes 自己记；常量时间比较，避免时序侧信道。
         /// </summary>

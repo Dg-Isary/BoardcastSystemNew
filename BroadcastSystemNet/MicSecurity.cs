@@ -82,23 +82,44 @@ namespace BroadcastSystemNet
         {
             readonly string _seed;
             readonly object _lock = new object();
-            readonly HashSet<long> _usedWindows = new HashSet<long>();
+            /// <summary>已用过的 (窗口, 设备) 组合。**按设备区分**，不按窗口一刀切。</summary>
+            readonly HashSet<string> _used = new HashSet<string>();
 
             public CodeStore(string seed) { _seed = seed ?? ""; }
 
-            /// <summary>校验并消费动态码：成功返回 true 且 window 为该码所属窗口；同一窗口只能用一次。</summary>
-            public bool TryConsume(string input, DateTime now, out long window)
+            /// <summary>
+            /// 校验并消费动态码：成功返回 true 且 window 为该码所属窗口。
+            ///
+            /// 【一次性 = 每台设备每窗口一次】为什么不是"每窗口一次"：
+            /// 原来 _usedWindows 按窗口记，于是同一个 60 秒窗口里：
+            ///   · 手机同时试多条通道（vnt 中继 + 局域网直发 + 重试）→ 第一条成功，其余全判 bad_code；
+            ///   · 第一台设备配成功后，第二台设备就再也连不上，只能等下一窗口；
+            ///   · 用户输错一次再输对，也可能因为别的请求先消费掉而失败。
+            /// 真机表现就是"配对成功 2、失败 11"以及"验证码明明对却配不上"。
+            /// 现在按 (窗口, 设备) 记：同一台设备同一窗口只认一次（防重放），
+            /// 不同设备各自独立 —— 既保留防重放，又不会互相挤掉。
+            /// 调用方不传设备时退化为 (窗口, "*")，行为与旧的"每窗口一次"一致。
+            /// </summary>
+            public bool TryConsume(string input, DateTime now, out long window) => TryConsume(input, now, null, out window);
+
+            public bool TryConsume(string input, DateTime now, string deviceId, out long window)
             {
                 window = 0;
                 if (!MicProtocol.VerifyCode(_seed, input, now, out long w)) return false;
+                string dev = string.IsNullOrWhiteSpace(deviceId) ? "*" : deviceId.Trim();
+                string key = w + "#" + dev;
                 lock (_lock)
                 {
-                    if (_usedWindows.Contains(w)) return false;   // 已经用过（一次性）
-                    _usedWindows.Add(w);
-                    if (_usedWindows.Count > 64)                  // 老窗口定期清理，避免无限增长
+                    if (_used.Contains(key)) return false;   // 这台设备已经用过这个窗口的码
+                    _used.Add(key);
+                    if (_used.Count > 256)                   // 老窗口定期清理，避免无限增长
                     {
                         long keep = MicProtocol.WindowIndex(now) - 4;
-                        foreach (var old in _usedWindows.Where(x => x < keep).ToList()) _usedWindows.Remove(old);
+                        foreach (var old in _used.Where(x =>
+                        {
+                            int hash = x.IndexOf('#');
+                            return hash > 0 && long.TryParse(x.Substring(0, hash), out long ww) && ww < keep;
+                        }).ToList()) _used.Remove(old);
                     }
                     window = w;
                     return true;

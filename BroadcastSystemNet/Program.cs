@@ -4068,15 +4068,22 @@ ntext
             app.MapGet("/api/mic/code", () => {
                 try
                 {
-                    var now = DateTime.Now;
-                    string code = MicProtocol.CurrentCode(VntManager.MicCodeSeed, now);
-                    double period = MicProtocol.CodePeriodSeconds;
-                    double left = period - (DateTime.UtcNow.Ticks / (double)TimeSpan.TicksPerSecond % period);
+                    // 【两端必须一致】这里以前用 DateTime.Now（靠 WindowIndex 内部 ToUniversalTime 兜底），
+                    // 电脑端界面用 DateTime.UtcNow —— 只要机器时区/Kind 有一点差异，两边就会显示不同的码。
+                    // 现在统一走 CurrentCodeUtc / SecondsLeftUtc，同一时钟、同一入口。
+                    string seed = VntManager.MicCodeSeed;
+                    string code = MicProtocol.CurrentCodeUtc(seed);
+                    int period = MicProtocol.CodePeriodSeconds;
+                    int left = MicProtocol.SecondsLeftUtc();
                     return Results.Json(new JsonObject
                     {
                         ["code"] = code,
-                        ["seconds_left"] = (int)Math.Max(0, Math.Ceiling(left)),
-                        ["period"] = (int)period
+                        ["seconds_left"] = left,
+                        ["period"] = period,
+                        // 【诊断】种子指纹（SHA256 前 8 位）：只用来核对两端是不是同一把种子，
+                        // 反推不出种子本身。手机上把它和电脑端日志里的值一比，就知道码为什么不一样。
+                        ["seed_fp"] = MicProtocol.SeedFingerprint(seed),
+                        ["window"] = MicProtocol.WindowIndex(DateTime.UtcNow)
                     });
                 }
                 catch (Exception ex) { return Results.Json(new JsonObject { ["error"] = ex.Message }); }

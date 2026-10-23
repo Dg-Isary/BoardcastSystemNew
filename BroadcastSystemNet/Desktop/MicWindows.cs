@@ -837,11 +837,12 @@ namespace BroadcastSystemNet.Desktop
             try
             {
                 string seed = VntManager.MicCodeSeed;
-                string code = MicProtocol.CurrentCode(seed, DateTime.UtcNow);
+                // 与 /api/mic/code、运行总览同一入口（内部统一 UTC），三处显示的码必然一致。
+                string code = MicProtocol.CurrentCodeUtc(seed);
                 long idx = MicProtocol.WindowIndex(DateTime.UtcNow);
-                int left = (int)(MicProtocol.CodePeriodSeconds - (DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond % MicProtocol.CodePeriodSeconds));
+                int left = MicProtocol.SecondsLeftUtc();
                 _code.Text = code;
-                _codeTip.Text = $"剩余 {left} 秒后自动换码；一码只能用一次。{MicDuck.StatusText()}";
+                _codeTip.Text = $"剩余 {left} 秒后自动换码；同一窗口只能配对一次（换码后旧码立即失效）。{MicDuck.StatusText()}";
                 MicDuck.DuckPercent = _duck.Value;
                 _status.Text = MicServer.StatusText() + "\n" + VntProcess.StatusSummary();
             }
