@@ -1460,6 +1460,24 @@ namespace BroadcastSystemNet
             Check(s1 == s2 && s1.Length >= 16, "MicCodeSeed 多次读取保持稳定",
                 $"fp={MicProtocol.SeedFingerprint(s1)} len={s1.Length}");
 
+            // 【机型名持久化】用户要求：管理员界面默认显示手机型号，UUID 太长不适合人读。
+            // 机型名存在 mic.trusted_names（独立键，与信任名单无关）—— 这里验证它真的能写能读，
+            // 并且**不会**因为记录机型名而把设备混进信任名单（这是两个不同的配置项）。
+            {
+                string fakeDev = "selftest-model-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+                string fakeModel = "Xiaomi Redmi K40";
+                bool wasTrusted = VntManager.IsTrustedDevice(fakeDev);
+                VntManager.SetTrustedDeviceName(fakeDev, fakeModel);
+                Check(VntManager.TrustedDeviceName(fakeDev) == fakeModel,
+                    "机型名写入后能读回（管理员界面靠它显示）", VntManager.TrustedDeviceName(fakeDev));
+                Check(VntManager.IsTrustedDevice(fakeDev) == wasTrusted,
+                    "记录机型名不会把设备混进信任名单（trusted_names 与 TrustedDevices 是两个键）",
+                    $"trusted={VntManager.IsTrustedDevice(fakeDev)}");
+                // 未记录过的设备必须返回空串 —— 由界面回退成"未知机型"，绝不能回退成 UUID
+                Check(VntManager.TrustedDeviceName("never-seen-" + Guid.NewGuid().ToString("N")) == "",
+                    "未记录的设备机型名为空（界面据此显示「未知机型」而不是 UUID）");
+            }
+
             // RFC 7748 官方向量：手机端（纯 Kotlin X25519）也用同一组向量自检，
             // 两边都对上 → 手机与电脑算出的共享密钥必然一致（这是配对能不能通的关键前提）。
             var rfcPrivA = HexToBytes("77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a");

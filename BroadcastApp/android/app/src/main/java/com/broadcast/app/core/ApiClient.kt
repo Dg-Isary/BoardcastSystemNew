@@ -81,8 +81,15 @@ class ApiClient(private val sender: (ByteArray) -> Unit) {
     var deviceId: String = ""
     /** 设备凭证（类 cookie）：配对时由电脑端下发，之后每个请求都带上。 */
     var credential: String = ""
-    /** 机型名（给电脑端管理员窗口显示，便于认设备）。 */
-    var deviceName: String = ""
+    /**
+     * 机型名（给电脑端「管理员」窗口显示，便于认设备）。
+     *
+     * 【为什么默认就给机型】以前这个字段只有扫码配置里带 `mic.name` 时才有值，
+     * 而二维码里根本不写 name —— 于是**永远为空**，`dname` 从不上报，
+     * 电脑端只能退回去显示 `device_id`（32 位 UUID），人类根本没法认。
+     * 现在默认取 `厂商 + 型号`（如 "Xiaomi Redmi K40"），用户不用配置也能一眼认出。
+     */
+    var deviceName: String = defaultDeviceName()
     /** 最近一次写操作的信封摘要（诊断用，日志导出时会带上）。 */
     var writeTrace: String = ""
 
@@ -258,4 +265,27 @@ class ApiClient(private val sender: (ByteArray) -> Unit) {
     var retries = 0
     /** 靠重传救回来的请求数（可靠性指标：这些请求第一次是丢了的）。 */
     var retriesRecovered = 0
+
+    companion object {
+        /**
+         * 默认机型名：`厂商 + 型号`，并去掉重复前缀。
+         *
+         * 例：Xiaomi 的 `Build.MODEL` 通常已经是 "Redmi K40"，直接拼会变成
+         * "Xiaomi Redmi K40"（可读 ✓）；但有些厂商的 MODEL 以厂商名开头（"Xiaomi M2101K9C"），
+         * 这时不再重复拼厂商。取不到就退回 "Android"，保证电脑端永远有东西显示、不会退化成 UUID。
+         */
+        fun defaultDeviceName(): String {
+            return try {
+                val mfr = android.os.Build.MANUFACTURER?.trim().orEmpty()
+                val mdl = android.os.Build.MODEL?.trim().orEmpty()
+                when {
+                    mdl.isBlank() && mfr.isBlank() -> "Android"
+                    mdl.isBlank() -> mfr
+                    mfr.isBlank() -> mdl
+                    mdl.startsWith(mfr, ignoreCase = true) -> mdl
+                    else -> "$mfr $mdl"
+                }
+            } catch (t: Throwable) { "Android" }
+        }
+    }
 }

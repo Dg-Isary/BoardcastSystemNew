@@ -255,7 +255,12 @@ namespace BroadcastSystemNet
             string did = o["did"]?.ToString() ?? "";
             // 记下"这台设备用过 App"（内存表，不写配置）：管理员赋权不必等它先做话筒配对
             try { VntManager.NoteSeenDevice(did, o["dname"]?.ToString()); } catch { }
-            try { if (VntManager.IsTrustedDevice(did)) VntManager.SetTrustedDeviceName(did, o["dname"]?.ToString()); } catch { }   // 已信任设备顺手记机型名
+            // 机型名持久化：**不再要求"已信任"才记**。
+            // 原来只在 IsTrustedDevice 时才写，于是"设成管理员但没配对话筒"的设备永远没有机型名，
+            // 电脑端只能退回去显示 32 位 UUID（用户反馈：UUID 太长不适合人读）。
+            // trusted_names 是**独立的键**（与 TrustedDevices 名单无关），所以对所有设备记录机型是安全的，
+            // 不会因此把设备加进信任列表。
+            try { VntManager.SetTrustedDeviceName(did, o["dname"]?.ToString()); } catch { }
             // 【诊断】/api/mic/* 的调用都先记一条（放在凭证校验**之前**）：
             // 这样"请求没到"、"凭证被拒"、"不是管理员"三种情况在日志里能一眼分开。
             if (path.StartsWith("/api/mic/code") || path.StartsWith("/api/mic/devices") || path.StartsWith("/api/mic/kick"))

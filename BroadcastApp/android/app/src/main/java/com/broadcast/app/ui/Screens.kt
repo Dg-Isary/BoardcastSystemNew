@@ -1451,6 +1451,9 @@ private fun AdminPanel(state: AppState) {
         }
         state.micDevices.forEach { d ->
             val isAdminDev = d.optBoolean("admin")
+            // 【可读性】主行显示**机型**（电脑端 /api/mic/devices 的 name 字段）。
+            // UUID 太长不适合人读，只留在第二行小字里（核对时才看）。
+            val model = d.optString("name").ifBlank { "未知机型" }
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -1467,8 +1470,9 @@ private fun AdminPanel(state: AppState) {
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        d.optString("device").take(16).ifBlank { "未知设备" },
-                        fontSize = 12.5.sp,
+                        model,
+                        fontSize = 13.sp,
+                        fontWeight = if (isAdminDev) FontWeight.Medium else FontWeight.Normal,
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Ellipsis

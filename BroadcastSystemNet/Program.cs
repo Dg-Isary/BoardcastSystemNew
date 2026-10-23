@@ -4089,6 +4089,23 @@ ntext
                 catch (Exception ex) { return Results.Json(new JsonObject { ["error"] = ex.Message }); }
             });
 
+            // 设备显示名（机型）：优先"信任设备里记下的机型名"，其次"见过的设备"记录。
+            // 都没有就返回空串 —— 由界面自己决定怎么回退（电脑端显示"未知机型"，
+            // 绝不再把 32 位 UUID 顶到主行；用户明确说过 UUID 不适合人读）。
+            string DeviceDisplayName(string deviceId)
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(deviceId)) return "";
+                    string n = VntManager.TrustedDeviceName(deviceId);
+                    if (!string.IsNullOrWhiteSpace(n)) return n.Trim();
+                    var seen = VntManager.SeenDeviceList()
+                        .FirstOrDefault(x => string.Equals(x.Id, deviceId, StringComparison.OrdinalIgnoreCase));
+                    return string.IsNullOrWhiteSpace(seen.Name) ? "" : seen.Name.Trim();
+                }
+                catch { return ""; }
+            }
+
             app.MapGet("/api/mic/devices", () => {
                 var arr = new JsonArray();
                 try
@@ -4098,6 +4115,9 @@ ntext
                         {
                             ["sid"] = s.Sid,
                             ["device"] = s.DeviceId ?? "",
+                            // 【可读性】机型名：手机端管理员面板/电脑端列表用它显示，避免把 32 位 UUID 顶到主行。
+                            // 取不到时返回空串，界面自己回退（绝不在这里塞 UUID，那等于没改善）。
+                            ["name"] = DeviceDisplayName(s.DeviceId),
                             ["ip"] = s.SourceIp ?? "",
                             ["admin"] = !string.IsNullOrWhiteSpace(s.DeviceId) && VntManager.IsAdminDevice(s.DeviceId)
                         });

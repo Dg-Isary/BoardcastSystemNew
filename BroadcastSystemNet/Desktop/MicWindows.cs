@@ -669,11 +669,16 @@ namespace BroadcastSystemNet.Desktop
                     string dev = s.DeviceId ?? "";
                     var line = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
                     bool trustedNow = VntManager.IsTrustedDevice(dev);
+                    // 【可读性】主行显示**机型**（用户要求：UUID 太长不适合人读），ID 放 ToolTip。
+                    string model = "";
+                    try { model = VntManager.TrustedDeviceName(dev); } catch { }
+                    string shown = string.IsNullOrWhiteSpace(model) ? "未知机型" : model.Trim();
                     line.Children.Add(new TextBlock
                     {
-                        Text = $"会话{s.Sid}　{VntSettingsWindow.Short(dev)}　{s.SourceIp}" + (s.MaxMinutes > 0 ? $"　上限{s.MaxMinutes}分" : ""),
+                        Text = $"{shown}　会话{s.Sid}　{s.SourceIp}" + (s.MaxMinutes > 0 ? $"　上限{s.MaxMinutes}分" : ""),
                         FontSize = 11.5, Foreground = Theme.TextDark, VerticalAlignment = VerticalAlignment.Center,
-                        TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 300
+                        TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 300,
+                        ToolTip = "完整设备 ID：" + dev
                     });
                     var trustBtn = Theme.Button(trustedNow ? "已信任" : "信任", trustedNow ? Theme.Success : (Brush)null,
                         trustedNow ? Brushes.White : null, trustedNow ? "\uf00c" : "\uf0c7", () =>
@@ -718,10 +723,10 @@ namespace BroadcastSystemNet.Desktop
                     var line = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
                     line.Children.Add(new TextBlock
                     {
-                        // 机型名（手机上报过才有）+ 设备 ID 前 12 位 + 管理员标记：
-                        // 离线设备也能一眼认出是哪台（用户要求：无论在线离线都要显示全部信任设备）
-                        Text = (string.IsNullOrWhiteSpace(nameOf(id)) ? "" : nameOf(id) + "　")
-                               + VntSettingsWindow.Short(id) + (VntManager.IsAdminDevice(id) ? "　[管理员]" : ""),
+                        // 主行只显示**机型**（用户要求：UUID 太长不适合人读）+ 管理员标记；
+                        // 完整设备 ID 放 ToolTip（核对/复制时悬停可见），不再顶到主行。
+                        Text = (string.IsNullOrWhiteSpace(nameOf(id)) ? "未知机型" : nameOf(id).Trim())
+                               + (VntManager.IsAdminDevice(id) ? "　[管理员]" : ""),
                         FontSize = 11.5, Foreground = Theme.TextDark, VerticalAlignment = VerticalAlignment.Center,
                         ToolTip = "完整设备 ID：" + id
                     });
