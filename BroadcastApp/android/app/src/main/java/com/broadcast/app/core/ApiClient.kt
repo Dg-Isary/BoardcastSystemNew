@@ -271,7 +271,7 @@ class ApiClient(private val sender: (ByteArray) -> Unit) {
          * 默认机型名：`厂商 + 型号`，并去掉重复前缀。
          *
          * 例：Xiaomi 的 `Build.MODEL` 通常已经是 "Redmi K40"，直接拼会变成
-         * "Xiaomi Redmi K40"（可读 ✓）；但有些厂商的 MODEL 以厂商名开头（"Xiaomi M2101K9C"），
+         * "Xiaomi Redmi K40"（可读）；但有些厂商的 MODEL 以厂商名开头（"Xiaomi M2101K9C"），
          * 这时不再重复拼厂商。取不到就退回 "Android"，保证电脑端永远有东西显示、不会退化成 UUID。
          */
         fun defaultDeviceName(): String {
